@@ -1,0 +1,16 @@
+#!/bin/python3      
+import numpy as np
+import rospy
+
+def run():
+    try:
+        rospy.init_node("trajectory_generator")
+        
+        while not rospy.is_shutdown():
+            pass
+        
+    except rospy.ROSException:
+        pass
+
+if __name__ == 'main':
+    run()

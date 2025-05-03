@@ -1,0 +1,7 @@
+.*
+!.gitignore
+compile_commands.json
+!.clang-format
+*.csv
+*.png
+assets/universal_robots_ur5e/*

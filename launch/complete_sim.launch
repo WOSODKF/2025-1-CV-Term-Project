@@ -1,0 +1,35 @@
+<?xml version="1.0" ?>
+<launch>
+  <arg name="output" default="screen"/>
+  <arg name="xml_file" default="$(dirname)/../assets/scene.xml"/>
+  <arg name="param" default="$(dirname)/../assets/param.yaml"/>
+  <arg name="package" default="cv_project"/>
+  <node name="simulator" pkg="$(arg package)" type="simulator" output="$(arg output)">
+    <param name="xml_file" value="$(arg xml_file)"/>
+    <param name="param" value="$(arg param)"/>
+  </node>
+  <group ns="robot_0">
+    <node name="trajectory_generator" pkg="$(arg package)" type="trajectory_generator" output="screen">
+      <param name="agent_id" value="0"/>
+      <param name="param" value="$(arg param)"/>
+    </node>
+  </group>
+  <group ns="robot_1">
+    <node name="trajectory_generator" pkg="$(arg package)" type="trajectory_generator" output="screen">
+      <param name="agent_id" value="1"/>
+      <param name="param" value="$(arg param)"/>
+    </node>
+  </group>
+  <group ns="robot_2">
+    <node name="trajectory_generator" pkg="$(arg package)" type="trajectory_generator" output="screen">
+      <param name="agent_id" value="2"/>
+      <param name="param" value="$(arg param)"/>
+    </node>
+  </group>
+  <group ns="robot_3">
+    <node name="trajectory_generator" pkg="$(arg package)" type="trajectory_generator" output="screen">
+      <param name="agent_id" value="3"/>
+      <param name="param" value="$(arg param)"/>
+    </node>
+  </group>
+</launch>
