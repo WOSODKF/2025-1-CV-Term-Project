@@ -32,14 +32,14 @@
 
   <worldbody>
     <!-- <light name="spotlight_1" mode="targetbodycom" target="wrist_z_link_1" pos="0 -1 2"/> -->
-    <body name="base_1" euler="0 0 1.5708" pos="0.85 -0.85 0" childclass="ur5e">
+    <body name="base_1" euler="0 0 0" pos="0 -1.0 0" childclass="ur5e">
       <inertial mass="4.0" pos="0 0 0" diaginertia="0.004433 0.004433 0.0072"/>
       <geom type="cylinder" size="0.09 0.05" rgba="0.3 0.3 0.3 1"/>
       <body name="shoulder_link_1" pos="0 0 0.163">
         <inertial mass="3.7" pos="0 0 0" diaginertia="0.01027 0.01027 0.00666"/>
         <joint name="shoulder_pan_joint_1" class="size3" axis="0 0 1"/>
         <geom type="capsule" fromto="0 0 0 0 0.138 0" size="0.045"/>
-        <body name="upper_1rm_link_1" pos="0 0.138 0" quat="1 0 1 0">
+        <body name="upper_arm_link_1" pos="0 0.138 0" quat="1 0 1 0">
           <inertial mass="8.393" pos="0 0 0.2125" diaginertia="0.13389 0.13389 0.0151"/>
           <joint name="shoulder_lift_joint_1" class="size3" axis="0 1 0"/>
           <geom type="capsule" fromto="0 0 0 0 -0.131 0.425" size="0.045"/>
@@ -51,6 +51,7 @@
               <inertial mass="1.219" pos="0 0.127 0" diaginertia="0.00256 0.00256 0.00219"/>
               <joint name="wrist_y1_joint_1" class="size1" axis="0 1 0"/>
               <geom type="capsule" fromto="0 0 0 0 0.127 0" size="0.035"/>
+              <camera name="cam_1" pos="0 0.15 -0.1" euler="-1.0472 3.1416 0"/>
               <body name="wrist_z_link_1" pos="0 0.127 0">
                 <inertial mass="1.219" pos="0 0 0.1" diaginertia="0.00256 0.00256 0.00219"/>
                 <joint name="wrist_z_joint_1" class="size1" axis="0 0 1"/>

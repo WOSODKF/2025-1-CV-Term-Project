@@ -2,7 +2,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
 # === CONFIG ===
-scene_path = "$(dirname)/../assets/scene.xml"
+scene_path = "../assets/scene.xml"
 output_launch_path = "complete_sim.launch"
 default_pkg = "cv_project"
 
@@ -24,7 +24,7 @@ launch = ET.Element("launch")
 # Launch args
 for name, default in [
     ("output", "screen"),
-    ("xml_file", scene_path),
+    ("xml_file", "$(dirname)/" + scene_path),
     ("param", "$(dirname)/../assets/param.yaml"),
     ("package", default_pkg),
 ]:

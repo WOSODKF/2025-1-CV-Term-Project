@@ -41,10 +41,12 @@ target_sources(
   PRIVATE
   src/simulator/main.cpp
   src/simulator/simulator.cpp
+  src/simulator/robot.cpp
   src/simulator/ros_io/data_publisher.cpp
   src/simulator/ros_io/setpoint_subscriber.cpp
   src/utils/config.cpp
   src/utils/data_struct.cpp
+  src/utils/math.cpp
 )
 target_include_directories(
   simulator

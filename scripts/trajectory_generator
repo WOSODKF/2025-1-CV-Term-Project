@@ -1,16 +1,64 @@
 #!/bin/python3      
+import os
+import sys
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(script_dir)
+
 import numpy as np
 import rospy
+from cv_project.msg import setpoint
+from utils.math_utils import *
+
+def in_fixed_pose(point, quat):
+    
+    msg = setpoint()
+    msg.end_pos.x = point[0]
+    msg.end_pos.y = point[1]
+    msg.end_pos.z = point[2]
+    
+    msg.end_quat.w = quat[0]
+    msg.end_quat.x = quat[1]
+    msg.end_quat.y = quat[2]
+    msg.end_quat.z = quat[3]
+    
+    msg.end_vel.x = 0
+    msg.end_vel.y = 0
+    msg.end_vel.z = 0
+    
+    msg.end_w.x = 0
+    msg.end_w.y = 0
+    msg.end_w.z = 0
+    
+    return msg
+    
 
 def run():
     try:
         rospy.init_node("trajectory_generator")
-        
+        agent_ID = rospy.get_param("~agent_id")
+        pub_topic_name = "/robot_" + str(agent_ID) + "/trajectory_generator/setpoint"
+        pub = rospy.Publisher(pub_topic_name, setpoint, queue_size=10)
+        rate = rospy.Rate(10)
         while not rospy.is_shutdown():
-            pass
+            points = [[0.8, 0.8, 0.1],
+                    [0.8, -0.8, 0.1],
+                    [-0.8, -0.8, 0.1],
+                    [-0.8, 0.8, 0.1]]
+
+            
+            eulers=[[np.pi*3/4, 0, 0],
+                    [np.pi/4, 0, 0],
+                    [-np.pi/4, 0, 0],
+                    [-np.pi*3/4, 0, 0]]
+    
+            msg = in_fixed_pose(points[agent_ID], zyx_euler_to_quat(eulers[agent_ID], in_degree=False))
+            pub.publish(msg)
+            
+            rate.sleep()
         
     except rospy.ROSException:
         pass
 
-if __name__ == 'main':
+if __name__ == '__main__':
     run()
