@@ -14,10 +14,11 @@ inline value_t get_or_die(ros::NodeHandle& node, std::string name) {
 }
 
 sim_param_t get_sim_param(YAML::Node node) {
-  return sim_param_t {.g = node["g"].as<double>()};
+  return sim_param_t {
+    .g = node["g"].as<double>(), .measure_on = node["measure_on"].as<bool>()};
 }
 
-robot_param_t get_robot_param(YAML::Node node){
+robot_param_t get_robot_param(YAML::Node node) {
   return robot_param_t {
     .l01 = node["l01"].as<double>(),
     .l12x = node["l12x"].as<double>(),
@@ -25,8 +26,7 @@ robot_param_t get_robot_param(YAML::Node node){
     .l23 = node["l23"].as<double>(),
     .l34 = node["l34"].as<double>(),
     .l45 = node["l45"].as<double>(),
-    .l5E = node["l5E"].as<double>()
-  };
+    .l5E = node["l5E"].as<double>()};
 }
 
 std::shared_ptr<config_t> get_config() {

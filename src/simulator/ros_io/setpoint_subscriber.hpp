@@ -2,10 +2,10 @@
 
 #include "utils/data_struct.hpp"
 
+#include <cv_project/setpoint.h>
+
 #include <ros/node_handle.h>
 #include <ros/subscriber.h>
-
-#include <cv_project/setpoint.h>
 
 #include <Eigen/Dense>
 #include <memory>

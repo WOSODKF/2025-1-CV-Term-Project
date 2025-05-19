@@ -1,5 +1,7 @@
 sim:
   g: 9.81
+  measure_on: true
+  # measure_rate: 30
   
 robot:
   l01: 0.163
@@ -8,4 +10,8 @@ robot:
   l23: 0.392
   l34: 0.127
   l45: 0.1
-  l5E: 0.1
+  l5E: 0.15
+
+camera:
+  fovy: 60
+  # config on robot arm

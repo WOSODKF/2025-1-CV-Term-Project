@@ -18,6 +18,11 @@ double _lasty;
 int _pause_pub_cnt;
 int _reset_pub_cnt;
 
+// robot camera
+const int ROBOT_CAM_WIDTH = 640, ROBOT_CAM_HEIGHT = 360;
+mjvCamera _robot_camera;
+mjrRect _robot_viewport = {0, 0, ROBOT_CAM_WIDTH, ROBOT_CAM_HEIGHT};
+
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
   // backspace: reset simulation
   if (act == GLFW_PRESS && key == GLFW_KEY_BACKSPACE) {
@@ -150,36 +155,19 @@ Simulator::Simulator(std::shared_ptr<config_t> config): _config(config) {
   }
 
   // Initialize ros io & control value
-  mj_forward(_model, _data); // to access body xpos
+  mj_forward(_model, _data);  // to access body xpos
   ros::NodeHandle node("~");
-  // _setpoint_sub = std::vector<std::shared_ptr<SetpointSubscriber>>(_agent_num);
-  _data_pub = std::vector<std::shared_ptr<DataPublisher>>(_agent_num);
   _robot = std::vector<std::shared_ptr<Robot>>(_agent_num);
 
   for (int id = 0; id < _agent_num; id++) {
-    // ros_io
-    // _setpoint_sub[id] = make_setpoint_subscriber(node, id);
-    _data_pub[id] = make_data_publisher(node, id);
-
     // robot instance
     _robot[id] = make_robot(_model, _data, _config, node, id);
   }
 
-  //     _mj_ID = std::vector<mujoco_control_id_t>(_agent_num);
-  //     _last_control = std::vector<mujoco_control_t>(_agent_num);
-  //
-  //     for (int id = 0; id < _agent_num; id++)
-  //     {
-  //         // ros_io
-  //         _setpoint_sub[id] = make_setpoint_subscriber(node, id);
-  //         _data_pub[id] = make_data_publisher(node, id);
-  //
-  //         // control & control ID
-  //         _last_control[id].reset_control();
-  //         _mj_ID[id].set_id(_model, id);
-  //     }
-
   register_callback();
+
+  std::cout << "nefc:" << _data->nefc << std::endl
+            << "neq:" << _data->ne << std::endl;
 }
 
 Simulator::~Simulator() {
@@ -193,15 +181,25 @@ void Simulator::run() {
   while (!glfwWindowShouldClose(_window) && ros::ok()) {
     mjtNum simstart = _data->time;
     while (_data->time - simstart < 1.0 / 60.0 && _run) {
-      // set equality data
-      set_eq_data(_model, _data);
-
-      // simulation step
+      // simulation step (robot state update & control done in callback)
       mj_step(_model, _data);
 
-      // publish measurements(views & wrench data)
+      // publish states
       for (int id = 0; id < _agent_num; id++) {
-        //TODO
+        _robot[id]->publish_state();
+      }
+    }
+
+    // update measurement & publish (after integration -> 60Hz)
+    if(_config->sim.measure_on){
+      for (int id = 0; id < _agent_num; id++) {
+        // render robot view & publish
+        _robot[id]->update_wrench(_model, _data);
+        _robot[id]->update_view(
+          _model, _data, _option, _robot_camera, _scene, _context,
+          _robot_viewport);
+
+        _robot[id]->publish_measurement();
       }
     }
 
@@ -217,6 +215,7 @@ void Simulator::run() {
       _reset = false;
     }
 
+    // simulation scene rendering
     mjrRect viewport = {0, 0, 0, 0};
     glfwGetFramebufferSize(_window, &viewport.width, &viewport.height);
     mjv_updateScene(
@@ -234,7 +233,6 @@ void Simulator::run() {
 
 void Simulator::callback(const mjModel* m, mjData* d) {
   for (int id = 0; id < _agent_num; id++) {
-
     /*
     1. receive setpoint data
     2. solve inverse kinematics
@@ -258,66 +256,66 @@ void Simulator::callback_wrapper(const mjModel* m, mjData* d) {
   }
 }
 
-void Simulator::set_eq_data(mjModel* m, mjData* d) {
-  for (int id = 0; id < _agent_num; id++) {
-    int eq_id = _robot[id]->get_id()._grasp_equality_ID;
-    int B2_id = _robot[id]->get_id()._first_body_ID + 3;
-
-    if (!d->eq_active[eq_id]) {
-      // hard coding for cloth vertex
-      std::string vertex_name;
-      switch (id) {
-      case 0:
-        vertex_name = "cloth_255";
-        break;
-      case 1:
-        vertex_name = "cloth_240";
-        break;
-      case 2:
-        vertex_name = "cloth_0";
-        break;
-      case 3:
-        vertex_name = "cloth_15";
-        break;
-      }
-      int vertex_id = mj_name2id(m, mjOBJ_BODY, vertex_name.c_str());
-
-      // compute relpose
-      auto B2_quat = Eigen::Quaterniond(
-        d->xquat[4 * B2_id], d->xquat[4 * B2_id + 1], d->xquat[4 * B2_id + 2],
-        d->xquat[4 * B2_id + 3]);
-      auto vertex_quat = Eigen::Quaterniond(
-        d->xquat[4 * vertex_id], d->xquat[4 * vertex_id + 1],
-        d->xquat[4 * vertex_id + 2], d->xquat[4 * vertex_id + 3]);
-
-      B2_quat.normalize();
-      vertex_quat.normalize();
-
-      auto relquat = B2_quat.conjugate() * vertex_quat;
-      relquat.normalize();
-
-      // supplementary positions for check
-      int B0_id = _robot[id]->get_id()._first_body_ID;
-      int free_qpos_id = _robot[id]->get_id()._first_qpos_ID;
-      auto B0_xpos = Eigen::Vector3d(
-        d->xpos[3 * B0_id], d->xpos[3 * B0_id + 1], d->xpos[3 * B0_id + 2]);
-      auto free_qpos = Eigen::Vector3d(
-        d->qpos[free_qpos_id], d->qpos[free_qpos_id + 1],
-        d->qpos[free_qpos_id + 2]);
-
-      // TODO: try more flexible setting...
-      m->eq_data[mjNEQDATA * eq_id] = 0;
-      m->eq_data[mjNEQDATA * eq_id + 1] = 0;
-      m->eq_data[mjNEQDATA * eq_id + 2] = 0;
-      m->eq_data[mjNEQDATA * eq_id + 3] = 0.1725;  // hard-coded
-      m->eq_data[mjNEQDATA * eq_id + 4] = 0;
-      m->eq_data[mjNEQDATA * eq_id + 5] = 0;
-
-      m->eq_data[mjNEQDATA * eq_id + 6] = relquat.w();
-      m->eq_data[mjNEQDATA * eq_id + 7] = relquat.x();
-      m->eq_data[mjNEQDATA * eq_id + 8] = relquat.y();
-      m->eq_data[mjNEQDATA * eq_id + 9] = relquat.z();
-      m->eq_data[mjNEQDATA * eq_id + 10] = 1;
-    }
-  }
-}
+// void Simulator::set_eq_data(mjModel* m, mjData* d) {
+//   for (int id = 0; id < _agent_num; id++) {
+//     int eq_id = _robot[id]->get_id()._grasp_equality_ID;
+//     int B2_id = _robot[id]->get_id()._first_body_ID + 3;
+// 
+//     if (!d->eq_active[eq_id]) {
+//       // hard coding for cloth vertex
+//       std::string vertex_name;
+//       switch (id) {
+//       case 0:
+//         vertex_name = "cloth_255";
+//         break;
+//       case 1:
+//         vertex_name = "cloth_240";
+//         break;
+//       case 2:
+//         vertex_name = "cloth_0";
+//         break;
+//       case 3:
+//         vertex_name = "cloth_15";
+//         break;
+//       }
+//       int vertex_id = mj_name2id(m, mjOBJ_BODY, vertex_name.c_str());
+// 
+//       // compute relpose
+//       auto B2_quat = Eigen::Quaterniond(
+//         d->xquat[4 * B2_id], d->xquat[4 * B2_id + 1], d->xquat[4 * B2_id + 2],
+//         d->xquat[4 * B2_id + 3]);
+//       auto vertex_quat = Eigen::Quaterniond(
+//         d->xquat[4 * vertex_id], d->xquat[4 * vertex_id + 1],
+//         d->xquat[4 * vertex_id + 2], d->xquat[4 * vertex_id + 3]);
+// 
+//       B2_quat.normalize();
+//       vertex_quat.normalize();
+// 
+//       auto relquat = B2_quat.conjugate() * vertex_quat;
+//       relquat.normalize();
+// 
+//       // supplementary positions for check
+//       int B0_id = _robot[id]->get_id()._first_body_ID;
+//       int free_qpos_id = _robot[id]->get_id()._first_qpos_ID;
+//       auto B0_xpos = Eigen::Vector3d(
+//         d->xpos[3 * B0_id], d->xpos[3 * B0_id + 1], d->xpos[3 * B0_id + 2]);
+//       auto free_qpos = Eigen::Vector3d(
+//         d->qpos[free_qpos_id], d->qpos[free_qpos_id + 1],
+//         d->qpos[free_qpos_id + 2]);
+// 
+//       // TODO: try more flexible setting...
+//       m->eq_data[mjNEQDATA * eq_id] = 0;
+//       m->eq_data[mjNEQDATA * eq_id + 1] = 0;
+//       m->eq_data[mjNEQDATA * eq_id + 2] = 0;
+//       m->eq_data[mjNEQDATA * eq_id + 3] = 0.1725;  // hard-coded
+//       m->eq_data[mjNEQDATA * eq_id + 4] = 0;
+//       m->eq_data[mjNEQDATA * eq_id + 5] = 0;
+// 
+//       m->eq_data[mjNEQDATA * eq_id + 6] = relquat.w();
+//       m->eq_data[mjNEQDATA * eq_id + 7] = relquat.x();
+//       m->eq_data[mjNEQDATA * eq_id + 8] = relquat.y();
+//       m->eq_data[mjNEQDATA * eq_id + 9] = relquat.z();
+//       m->eq_data[mjNEQDATA * eq_id + 10] = 1;
+//     }
+//   }
+// }

@@ -19,20 +19,6 @@ struct robot_FK_param_t {
   // link screw & relpos
   std::vector<Vector3d> w;
   std::vector<Vector3d> p;
-  //
-  //   Vector3d w_0;
-  //   Vector3d w_1;
-  //   Vector3d w_2;
-  //   Vector3d w_3;
-  //   Vector3d w_4;
-  //   Vector3d w_5;
-  //
-  //   Vector3d p_01;
-  //   Vector3d p_12;
-  //   Vector3d p_23;
-  //   Vector3d p_34;
-  //   Vector3d p_45;
-  //   Vector3d p_5E;
 
   Vector3d base_pos;  // p_ss'
   Matrix3d base_rot;  // R_ss'
@@ -43,6 +29,8 @@ struct robot_FK_param_t {
 };
 
 struct robot_state_t {
+  double t;
+
   double joint_pos_0;
   double joint_pos_1;
   double joint_pos_2;
@@ -50,7 +38,10 @@ struct robot_state_t {
   double joint_pos_4;
   double joint_pos_5;
 
-  void update_state(const mjData* d, int first_qpos_ID);
+  Vector3d end_pos;
+  Matrix3d end_rot;
+
+  void update_state(const mjData* d, int first_qpos_ID, int end_site_ID);
 };
 
 struct setpoint_t {
@@ -67,8 +58,12 @@ struct fk_result_t {
 };
 
 
-struct mujoco_robot_data_t {
-  // TODO: define robot measurement data struct (image and wrench)
+struct mujoco_robot_wrench_t {
+  Vector3d ext_force;
+  Vector3d ext_torque;
+
+  void init_wrench();
+  void update_wrench(const Vector3d& force, const Vector3d& torque /* TODO: include image */);
 };
 
 struct mujoco_control_t {

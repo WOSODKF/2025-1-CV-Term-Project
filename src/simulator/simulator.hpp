@@ -2,7 +2,7 @@
 
 #include "simulator/robot.hpp"
 // #include "simulator/ros_io/setpoint_subscriber.hpp"
-#include "simulator/ros_io/data_publisher.hpp"
+// #include "simulator/ros_io/data_publisher.hpp"
 #include "utils/config.hpp"
 #include "utils/data_struct.hpp"
 
@@ -33,16 +33,15 @@ class Simulator {
     static void callback_wrapper(const mjModel* m, mjData* d);
     static std::function<void(const mjModel*, mjData*)> s_callback;
 
-    void set_eq_data(mjModel* m, mjData* d);
+    // void set_eq_data(mjModel* m, mjData* d);
 
     std::shared_ptr<config_t> _config;
-
     std::vector<std::shared_ptr<Robot>> _robot;
 
     // std::vector<std::shared_ptr<SetpointSubscriber>> _setpoint_sub;
-    std::vector<std::shared_ptr<DataPublisher>> _data_pub;
+    // std::vector<std::shared_ptr<DataPublisher>> _data_pub;
     // std::vector<mujoco_control_id_t> _mj_ID;
     // std::vector<mujoco_control_t> _last_control;
 
     int _agent_num;
-  };
+};

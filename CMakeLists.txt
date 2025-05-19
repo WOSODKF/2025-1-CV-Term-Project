@@ -17,17 +17,22 @@ link_directories("$ENV{HOME}/mujoco/mujoco-3.3.1/lib")
 find_package(yaml-cpp REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   std_msgs roscpp geometry_msgs
   message_generation
+  sensor_msgs
+  cv_bridge
+  image_transport
 )
 
 # messages
 add_message_files(
   DIRECTORY msg
   FILES
-  robotData.msg
+  robotWrench.msg
   setpoint.msg
+  robotState.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs geometry_msgs)
@@ -42,8 +47,9 @@ target_sources(
   src/simulator/main.cpp
   src/simulator/simulator.cpp
   src/simulator/robot.cpp
-  src/simulator/ros_io/data_publisher.cpp
+  src/simulator/ros_io/measurement_publisher.cpp
   src/simulator/ros_io/setpoint_subscriber.cpp
+  src/simulator/ros_io/state_publisher.cpp
   src/utils/config.cpp
   src/utils/data_struct.cpp
   src/utils/math.cpp
@@ -53,6 +59,7 @@ target_include_directories(
   PRIVATE
   ${catkin_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
   src
 )
 target_link_libraries(
@@ -63,6 +70,7 @@ target_link_libraries(
   mujoco
   glfw
   Eigen3::Eigen
+  ${OpenCV_LIBS}
 )
 target_compile_features(
   simulator

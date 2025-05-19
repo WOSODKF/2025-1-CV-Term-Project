@@ -30,13 +30,23 @@ void robot_FK_param_t::set_FK_param(
   base_rot = R_ss;
 }
 
-void robot_state_t::update_state(const mjData* d, int first_qpos_ID) {
+void robot_state_t::update_state(
+  const mjData* d, int first_qpos_ID, int end_site_ID) {
+  t = d->time;
   joint_pos_0 = d->qpos[first_qpos_ID];
   joint_pos_1 = d->qpos[first_qpos_ID + 1];
   joint_pos_2 = d->qpos[first_qpos_ID + 2];
   joint_pos_3 = d->qpos[first_qpos_ID + 3];
   joint_pos_4 = d->qpos[first_qpos_ID + 4];
   joint_pos_5 = d->qpos[first_qpos_ID + 5];
+
+  end_pos << d->site_xpos[3 * end_site_ID], d->site_xpos[3 * end_site_ID + 1],
+    d->site_xpos[3 * end_site_ID + 2];
+  end_rot << d->site_xmat[9 * end_site_ID], d->site_xmat[9 * end_site_ID + 1],
+    d->site_xmat[9 * end_site_ID + 2], d->site_xmat[9 * end_site_ID + 3],
+    d->site_xmat[9 * end_site_ID + 4], d->site_xmat[9 * end_site_ID + 5],
+    d->site_xmat[9 * end_site_ID + 6], d->site_xmat[9 * end_site_ID + 7],
+    d->site_xmat[9 * end_site_ID + 8];
 }
 
 void mujoco_control_t::reset_control() {
@@ -80,7 +90,7 @@ void mujoco_control_id_t::set_id(const mjModel* m, int agent_ID) {
 
   std::string site_name = "attachment_site_" + std::to_string(_agent_ID);
   _grasp_site_ID = mj_name2id(m, mjOBJ_SITE, site_name.c_str());
-  if (_grasp_site_ID == -1){
+  if (_grasp_site_ID == -1) {
     throw std::out_of_range("grasp site not found");
   }
 }
@@ -103,6 +113,16 @@ void mujoco_control_t::clip_control(double u_bound, double l_bound) {
   joint_pos_3 = clip(joint_pos_3, u_bound, l_bound);
   joint_pos_4 = clip(joint_pos_4, u_bound, l_bound);
   joint_pos_5 = clip(joint_pos_5, u_bound, l_bound);
+}
+
+void mujoco_robot_wrench_t::init_wrench() {
+  ext_force.setZero();
+  ext_torque.setZero();
+}
+
+void mujoco_robot_wrench_t::update_wrench(const Vector3d& force, const Vector3d& torque){
+  ext_force = force;
+  ext_torque = torque;
 }
 
 // mujoco_control_t inverse_kinematics(

@@ -51,16 +51,16 @@
               <inertial mass="1.219" pos="0 0.127 0" diaginertia="0.00256 0.00256 0.00219"/>
               <joint name="wrist_y1_joint_0" class="size1" axis="0 1 0"/>
               <geom type="capsule" fromto="0 0 0 0 0.127 0" size="0.035"/>
-              <camera name="cam_0" pos="0 0.15 -0.1" euler="-1.0472 3.1416 0"/>
               <body name="wrist_z_link_0" pos="0 0.127 0">
                 <inertial mass="1.219" pos="0 0 0.1" diaginertia="0.00256 0.00256 0.00219"/>
                 <joint name="wrist_z_joint_0" class="size1" axis="0 0 1"/>
                 <geom type="capsule" fromto="0 0 0 0 0 0.1" size="0.035"/>
-                <body name="wrist_y2_link_0" pos="0 0 0.1">
+                 <camera name="cam_0" pos="0 0 -0.1" euler="2.0 0 3.1416" fovy="60"/>
+                <body name="wrist_y2_link_0" pos="0 0 0.1" euler="0 3.1416 0">
                   <inertial mass="0.1889" pos="0 0.0771683 0" quat="1 0 0 1" diaginertia="0.0001321 0.000099 0.000099"/>
                   <joint name="wrist_y2_joint_0" class="size1" axis="0 1 0"/>
                   <geom type="capsule" fromto="0 0 0 0 0.1 0" size="0.03"/>
-                  <site name="attachment_site_0" pos="0 0.1 0" quat="-1 1 0 0" size="0.04" rgba="1 0 0 0.5"/>
+                  <site name="attachment_site_0" pos="0 0.15 0" quat="-1 1 0 0" size="0.02" rgba="1 0 0 0.5"/>
                 </body>
               </body>
             </body>

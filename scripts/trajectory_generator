@@ -7,7 +7,7 @@ sys.path.append(script_dir)
 
 import numpy as np
 import rospy
-from cv_project.msg import setpoint
+from cv_project.msg import setpoint, robotState, robotMeasurement
 from utils.math_utils import *
 
 def in_fixed_pose(point, quat):
@@ -31,7 +31,27 @@ def in_fixed_pose(point, quat):
     msg.end_w.z = 0
     
     return msg
+
     
+class StateSubscriber:
+    def __init__(self, agent_ID):
+        self.latest_msg = robotState()
+        self.initial_msg = robotState()
+        self.latest_msg.t = 0.0
+        
+        sub_topic_name = "/simulator/state_"+str(agent_ID)
+        self.sub = rospy.Subscriber(sub_topic_name, robotState, self.callback)
+        
+    def callback(self, msg):            
+        self.latest_msg = msg
+
+    def get_state(self):
+        return self.latest_msg
+    
+    def get_initial_state(self):
+        return self.initial_msg
+    
+
 
 def run():
     try:
@@ -39,22 +59,28 @@ def run():
         agent_ID = rospy.get_param("~agent_id")
         pub_topic_name = "/robot_" + str(agent_ID) + "/trajectory_generator/setpoint"
         pub = rospy.Publisher(pub_topic_name, setpoint, queue_size=10)
+        state_sub = StateSubscriber(agent_ID)
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
-            points = [[0.8, 0.8, 0.1],
-                    [0.8, -0.8, 0.1],
-                    [-0.8, -0.8, 0.1],
-                    [-0.8, 0.8, 0.1]]
-
+            '''
+            1st phase: approach(in_fixed_point until converging)
+            2nd phase: grasp(hold at current position and wait)
+            3rd phase: manipulate
+            '''
+            
+            points = [[0.5, 0.5, 0.5],
+                    [0.5, -0.5, 0.5],
+                    [-0.5, -0.5, 0.5],
+                    [-0.5, 0.5, 0.5]]
             
             eulers=[[np.pi*3/4, 0, 0],
                     [np.pi/4, 0, 0],
                     [-np.pi/4, 0, 0],
                     [-np.pi*3/4, 0, 0]]
-    
+
             msg = in_fixed_pose(points[agent_ID], zyx_euler_to_quat(eulers[agent_ID], in_degree=False))
-            pub.publish(msg)
             
+            pub.publish(msg)
             rate.sleep()
         
     except rospy.ROSException:

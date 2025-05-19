@@ -18,7 +18,33 @@ Robot::Robot(
 
   _fk_param.set_FK_param(base_pos, base_rot, config);
   _setpoint_sub = make_setpoint_subscriber(node, agent_ID);
+  _measurement_pub = make_measurement_publisher(node, agent_ID);
+  _state_pub = make_state_publisher(node, agent_ID);
+
+  _last_wrench.init_wrench();
 }
+
+void Robot::compute_control(const mjModel* m, const mjData* d) {
+  // update state
+  _current_state.update_state(d, _mj_ID._first_qpos_ID, _mj_ID._grasp_site_ID);
+  // measurement (may need some computation / MBO / etc.)
+  // _measured_data.update_data(force, torque);
+  // _measured_wrench.init_wrench();  // temp
+
+  // compute control
+  auto dt = m->opt.timestep;
+  _last_control = inverse_kinematics(_setpoint_sub->setpoint(), dt);
+}
+
+// void Robot::update_robot_data(const mjModel* m, const mjData* d) {
+//   // TODO: update state & measurement
+//
+//   // state
+//   _current_state.update_state(d, _mj_ID._first_qpos_ID,
+//   _mj_ID._grasp_site_ID);
+//
+//
+// }
 
 void Robot::set_mujoco_control(const mjModel* m, mjData* d) {
   compute_control(m, d);
@@ -40,6 +66,70 @@ void Robot::set_mujoco_control(const mjModel* m, mjData* d) {
   d->ctrl[first_act_ID + 5] = _last_control.joint_pos_5;
 }
 
+void Robot::update_wrench(const mjModel* m, mjData* d) {
+  Eigen::Vector3d force, torque;
+  //(temp)
+  force.setZero();
+  torque.setZero();
+  /*----TODO: get constraint force and torque from efc_force-----*/
+  if(_agent_ID==0){
+    int equality_id = mj_name2id(m, mjOBJ_EQUALITY, "grasp_0");
+    std::cout << "nefc:" << d->nefc << std::endl;
+    std::cout << "equality ID:" << equality_id << std::endl;
+    std::cout << "efc_force:" << std::endl;
+    for (int i = 0; i < 6; i++) {
+      std::cout << d->efc_force[_mj_ID._grasp_equality_ID + i] << " ";
+    }
+    std::cout << std::endl;
+  }
+
+  /* Note
+  - efc_force includes constraints in cloth
+  - may have to implement MBO...
+  */
+
+  /*-------------------------------------------------------------*/
+  _last_wrench.update_wrench(force, torque);
+}
+
+void Robot::update_view(
+  const mjModel* m, mjData* d, mjvOption& opt, mjvCamera& cam, mjvScene& scn,
+  mjrContext& con, const mjrRect& viewport) {
+  int cam_ID = _agent_ID;
+  const int WIDTH = viewport.width;
+  const int HEIGHT = viewport.height;
+  unsigned char rgb_buffer[WIDTH * HEIGHT * 3];
+
+  cam.type = mjCAMERA_FIXED;
+  cam.fixedcamid = cam_ID;
+
+  // Update scene
+  mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
+
+  // Render
+  mjr_render(viewport, &scn, &con);
+
+  // Read pixels (RGB only here)
+  mjr_readPixels(rgb_buffer, NULL, viewport, &con);
+
+  // Get RGB image
+  cv::Mat rgb_img(HEIGHT, WIDTH, CV_8UC3, rgb_buffer);
+  _last_view = rgb_img;
+}
+
+void Robot::publish_state() {
+  _state_pub->update_state(_current_state);
+  _state_pub->pub();
+}
+
+void Robot::publish_measurement() {
+  _measurement_pub->update_wrench(_last_wrench);
+  _measurement_pub->update_view(_last_view);
+
+  _measurement_pub->pub();
+}
+
+/* Kinematics */
 const mujoco_control_t Robot::inverse_kinematics(
   const setpoint_t& setpoint, double dt) {
   // IK hyperparams
@@ -148,15 +238,6 @@ const fk_result_t Robot::forward_kinematics(const mujoco_control_t& theta) {
   result.Jes = Jes;
 
   return result;
-}
-
-void Robot::compute_control(const mjModel* m, const mjData* d) {
-  // update state
-  _current_state.update_state(d, _mj_ID._first_qpos_ID);
-
-  // compute control
-  auto dt = m->opt.timestep;
-  _last_control = inverse_kinematics(_setpoint_sub->setpoint(), dt);
 }
 
 const mujoco_control_t Robot::get_control() const {
