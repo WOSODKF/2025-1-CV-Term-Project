@@ -19,9 +19,9 @@ int _pause_pub_cnt;
 int _reset_pub_cnt;
 
 // robot camera
-const int ROBOT_CAM_WIDTH = 640, ROBOT_CAM_HEIGHT = 360;
+int ROBOT_CAM_WIDTH, ROBOT_CAM_HEIGHT;
 mjvCamera _robot_camera;
-mjrRect _robot_viewport = {0, 0, ROBOT_CAM_WIDTH, ROBOT_CAM_HEIGHT};
+mjrRect _robot_viewport;
 
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
   // backspace: reset simulation
@@ -164,10 +164,11 @@ Simulator::Simulator(std::shared_ptr<config_t> config): _config(config) {
     _robot[id] = make_robot(_model, _data, _config, node, id);
   }
 
-  register_callback();
+  ROBOT_CAM_WIDTH = _config->camera.width;
+  ROBOT_CAM_HEIGHT = _config->camera.height;
+  _robot_viewport = {0, 0, ROBOT_CAM_WIDTH, ROBOT_CAM_HEIGHT};
 
-  std::cout << "nefc:" << _data->nefc << std::endl
-            << "neq:" << _data->ne << std::endl;
+  register_callback();
 }
 
 Simulator::~Simulator() {
@@ -179,8 +180,10 @@ Simulator::~Simulator() {
 
 void Simulator::run() {
   while (!glfwWindowShouldClose(_window) && ros::ok()) {
+    auto comp_start = std::chrono::steady_clock::now();
+
     mjtNum simstart = _data->time;
-    while (_data->time - simstart < 1.0 / 60.0 && _run) {
+    while (_data->time - simstart < 1.0 / _config->sim.FPS && _run) {
       // simulation step (robot state update & control done in callback)
       mj_step(_model, _data);
 
@@ -190,8 +193,10 @@ void Simulator::run() {
       }
     }
 
+    auto dyna_end = std::chrono::steady_clock::now();
+
     // update measurement & publish (after integration -> 60Hz)
-    if(_config->sim.measure_on){
+    if (_config->sim.measure_on && _run) {
       for (int id = 0; id < _agent_num; id++) {
         // render robot view & publish
         _robot[id]->update_wrench(_model, _data);
@@ -202,6 +207,8 @@ void Simulator::run() {
         _robot[id]->publish_measurement();
       }
     }
+
+    auto robot_render_end = std::chrono::steady_clock::now();
 
     // reset behavior (0415: organize codes and variables / update reset
     // behavior)
@@ -221,8 +228,41 @@ void Simulator::run() {
     mjv_updateScene(
       _model, _data, &_option, NULL, &_camera, mjCAT_ALL, &_scene);
     mjr_render(viewport, &_scene, &_context);
+
+    // clock visualization
+    char time_string[50];
+    snprintf(time_string, sizeof(time_string), "%.3f s", _data->time);
+    mjr_overlay(
+      mjFONT_NORMAL, mjGRID_TOPRIGHT, viewport, "Sim Time", time_string,
+      &_context);
+
     glfwSwapBuffers(_window);
     glfwPollEvents();
+
+    auto scene_render_end = std::chrono::steady_clock::now();
+
+    // duration check
+    auto dyna_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+      dyna_end - comp_start);
+    auto robot_render_duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+        robot_render_end - dyna_end);
+    auto scene_render_duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+        scene_render_end - robot_render_end);
+    auto net_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+      scene_render_end - comp_start);
+    if (_run) {
+      std::cout << "[Durations]------" << std::endl;
+      std::cout << "sim time: " << _data->time << "s" << std::endl
+                << "dynamics: " << dyna_duration.count() << "ms" << std::endl
+                << "robot rendering: " << robot_render_duration.count() << "ms"
+                << std::endl
+                << "scene rendering: " << scene_render_duration.count() << "ms"
+                << std::endl
+                << "net: " << net_duration.count() << "ms" << std::endl
+                << std::endl;
+    }
   }
 
   if (glfwWindowShouldClose(_window)) {
@@ -233,13 +273,6 @@ void Simulator::run() {
 
 void Simulator::callback(const mjModel* m, mjData* d) {
   for (int id = 0; id < _agent_num; id++) {
-    /*
-    1. receive setpoint data
-    2. solve inverse kinematics
-    3. assign mj control
-    -> all done in Robot class
-    */
-
     _robot[id]->set_mujoco_control(m, d);
   }
 }
@@ -255,67 +288,3 @@ void Simulator::callback_wrapper(const mjModel* m, mjData* d) {
     s_callback(m, d);
   }
 }
-
-// void Simulator::set_eq_data(mjModel* m, mjData* d) {
-//   for (int id = 0; id < _agent_num; id++) {
-//     int eq_id = _robot[id]->get_id()._grasp_equality_ID;
-//     int B2_id = _robot[id]->get_id()._first_body_ID + 3;
-// 
-//     if (!d->eq_active[eq_id]) {
-//       // hard coding for cloth vertex
-//       std::string vertex_name;
-//       switch (id) {
-//       case 0:
-//         vertex_name = "cloth_255";
-//         break;
-//       case 1:
-//         vertex_name = "cloth_240";
-//         break;
-//       case 2:
-//         vertex_name = "cloth_0";
-//         break;
-//       case 3:
-//         vertex_name = "cloth_15";
-//         break;
-//       }
-//       int vertex_id = mj_name2id(m, mjOBJ_BODY, vertex_name.c_str());
-// 
-//       // compute relpose
-//       auto B2_quat = Eigen::Quaterniond(
-//         d->xquat[4 * B2_id], d->xquat[4 * B2_id + 1], d->xquat[4 * B2_id + 2],
-//         d->xquat[4 * B2_id + 3]);
-//       auto vertex_quat = Eigen::Quaterniond(
-//         d->xquat[4 * vertex_id], d->xquat[4 * vertex_id + 1],
-//         d->xquat[4 * vertex_id + 2], d->xquat[4 * vertex_id + 3]);
-// 
-//       B2_quat.normalize();
-//       vertex_quat.normalize();
-// 
-//       auto relquat = B2_quat.conjugate() * vertex_quat;
-//       relquat.normalize();
-// 
-//       // supplementary positions for check
-//       int B0_id = _robot[id]->get_id()._first_body_ID;
-//       int free_qpos_id = _robot[id]->get_id()._first_qpos_ID;
-//       auto B0_xpos = Eigen::Vector3d(
-//         d->xpos[3 * B0_id], d->xpos[3 * B0_id + 1], d->xpos[3 * B0_id + 2]);
-//       auto free_qpos = Eigen::Vector3d(
-//         d->qpos[free_qpos_id], d->qpos[free_qpos_id + 1],
-//         d->qpos[free_qpos_id + 2]);
-// 
-//       // TODO: try more flexible setting...
-//       m->eq_data[mjNEQDATA * eq_id] = 0;
-//       m->eq_data[mjNEQDATA * eq_id + 1] = 0;
-//       m->eq_data[mjNEQDATA * eq_id + 2] = 0;
-//       m->eq_data[mjNEQDATA * eq_id + 3] = 0.1725;  // hard-coded
-//       m->eq_data[mjNEQDATA * eq_id + 4] = 0;
-//       m->eq_data[mjNEQDATA * eq_id + 5] = 0;
-// 
-//       m->eq_data[mjNEQDATA * eq_id + 6] = relquat.w();
-//       m->eq_data[mjNEQDATA * eq_id + 7] = relquat.x();
-//       m->eq_data[mjNEQDATA * eq_id + 8] = relquat.y();
-//       m->eq_data[mjNEQDATA * eq_id + 9] = relquat.z();
-//       m->eq_data[mjNEQDATA * eq_id + 10] = 1;
-//     }
-//   }
-// }

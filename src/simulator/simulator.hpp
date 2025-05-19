@@ -18,6 +18,7 @@
 #include <memory>
 #include <functional>
 #include <optional>
+#include <chrono>
 
 class Simulator {
   public:

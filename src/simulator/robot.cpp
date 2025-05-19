@@ -16,9 +16,10 @@ Robot::Robot(
   base_quat.normalize();
   auto base_rot = base_quat.toRotationMatrix();
 
+  _ik_param = config->IK;
   _fk_param.set_FK_param(base_pos, base_rot, config);
   _setpoint_sub = make_setpoint_subscriber(node, agent_ID);
-  _measurement_pub = make_measurement_publisher(node, agent_ID);
+  _measurement_pub = make_measurement_publisher(node, agent_ID, _mj_ID._cam_ID);
   _state_pub = make_state_publisher(node, agent_ID);
 
   _last_wrench.init_wrench();
@@ -26,7 +27,7 @@ Robot::Robot(
 
 void Robot::compute_control(const mjModel* m, const mjData* d) {
   // update state
-  _current_state.update_state(d, _mj_ID._first_qpos_ID, _mj_ID._grasp_site_ID);
+  _current_state.update_state(d, _mj_ID._first_qpos_ID, _mj_ID._grasp_site_ID, _mj_ID._cam_ID);
   // measurement (may need some computation / MBO / etc.)
   // _measured_data.update_data(force, torque);
   // _measured_wrench.init_wrench();  // temp
@@ -72,19 +73,21 @@ void Robot::update_wrench(const mjModel* m, mjData* d) {
   force.setZero();
   torque.setZero();
   /*----TODO: get constraint force and torque from efc_force-----*/
-  if(_agent_ID==0){
-    int equality_id = mj_name2id(m, mjOBJ_EQUALITY, "grasp_0");
-    std::cout << "nefc:" << d->nefc << std::endl;
-    std::cout << "equality ID:" << equality_id << std::endl;
-    std::cout << "efc_force:" << std::endl;
-    for (int i = 0; i < 6; i++) {
-      std::cout << d->efc_force[_mj_ID._grasp_equality_ID + i] << " ";
-    }
-    std::cout << std::endl;
-  }
+  // if(_agent_ID == 1){
+  //   std::string name = "grasp_" + std::to_string(_agent_ID);
+  //   int equality_id = mj_name2id(m, mjOBJ_EQUALITY, name.c_str());
+  //   std::cout << "nefc:" << d->nefc << std::endl;
+  //   std::cout << "equality ID:" << equality_id << std::endl;
+  //   std::cout << "efc_force:" << std::endl;
+  //   for (int i = 0; i < 6; i++) {
+  //     std::cout << d->efc_force[_mj_ID._grasp_equality_ID + i] << " ";
+  //   }
+  //   std::cout << std::endl;
+  // }
 
   /* Note
   - efc_force includes constraints in cloth
+  - but equality ID for grasp does not change
   - may have to implement MBO...
   */
 
@@ -125,6 +128,7 @@ void Robot::publish_state() {
 void Robot::publish_measurement() {
   _measurement_pub->update_wrench(_last_wrench);
   _measurement_pub->update_view(_last_view);
+  _measurement_pub->update_state(_current_state); // should be called after updating view and wrench
 
   _measurement_pub->pub();
 }
@@ -133,9 +137,9 @@ void Robot::publish_measurement() {
 const mujoco_control_t Robot::inverse_kinematics(
   const setpoint_t& setpoint, double dt) {
   // IK hyperparams
-  const double lambda = 2.0;
-  const double Kw = 1.0;
-  const double Kp = 3.0;
+  const double lambda = _ik_param.lambda;
+  const double Kw = _ik_param.Kw;
+  const double Kp = _ik_param.Kp;
 
   // desired config
   auto Rd = setpoint.end_rot;

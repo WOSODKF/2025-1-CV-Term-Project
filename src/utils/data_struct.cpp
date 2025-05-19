@@ -31,8 +31,9 @@ void robot_FK_param_t::set_FK_param(
 }
 
 void robot_state_t::update_state(
-  const mjData* d, int first_qpos_ID, int end_site_ID) {
+  const mjData* d, int first_qpos_ID, int end_site_ID, int cam_ID) {
   t = d->time;
+
   joint_pos_0 = d->qpos[first_qpos_ID];
   joint_pos_1 = d->qpos[first_qpos_ID + 1];
   joint_pos_2 = d->qpos[first_qpos_ID + 2];
@@ -47,6 +48,14 @@ void robot_state_t::update_state(
     d->site_xmat[9 * end_site_ID + 4], d->site_xmat[9 * end_site_ID + 5],
     d->site_xmat[9 * end_site_ID + 6], d->site_xmat[9 * end_site_ID + 7],
     d->site_xmat[9 * end_site_ID + 8];
+
+  cam_pos << d->cam_xpos[3 * cam_ID], d->cam_xpos[3 * cam_ID + 1],
+    d->cam_xpos[3 * cam_ID + 2];
+  cam_rot << d->cam_xmat[9 * cam_ID], d->cam_xmat[9 * cam_ID + 1],
+    d->cam_xmat[9 * cam_ID + 2], d->cam_xmat[9 * cam_ID + 3],
+    d->cam_xmat[9 * cam_ID + 4], d->cam_xmat[9 * cam_ID + 5],
+    d->cam_xmat[9 * cam_ID + 6], d->cam_xmat[9 * cam_ID + 7],
+    d->cam_xmat[9 * cam_ID + 8];
 }
 
 void mujoco_control_t::reset_control() {
@@ -93,6 +102,12 @@ void mujoco_control_id_t::set_id(const mjModel* m, int agent_ID) {
   if (_grasp_site_ID == -1) {
     throw std::out_of_range("grasp site not found");
   }
+
+  std::string cam_name = "cam_" + std::to_string(_agent_ID);
+  _cam_ID = mj_name2id(m, mjOBJ_CAMERA, cam_name.c_str());
+  if (_cam_ID == -1) {
+    throw std::out_of_range("cam not found");
+  }
 }
 
 mujoco_control_t mujoco_control_t::operator+(const VectorXd& other) const {
@@ -120,7 +135,8 @@ void mujoco_robot_wrench_t::init_wrench() {
   ext_torque.setZero();
 }
 
-void mujoco_robot_wrench_t::update_wrench(const Vector3d& force, const Vector3d& torque){
+void mujoco_robot_wrench_t::update_wrench(
+  const Vector3d& force, const Vector3d& torque) {
   ext_force = force;
   ext_torque = torque;
 }
@@ -174,6 +190,19 @@ geometry_msgs::Vector3 eigen_to_vector3_msg(Vector3d v) {
   result.x = v.x();
   result.y = v.y();
   result.z = v.z();
+
+  return result;
+}
+
+geometry_msgs::Wrench eigen_to_wrench_msg(mujoco_robot_wrench_t wrench) {
+  geometry_msgs::Wrench result;
+
+  result.force.x = wrench.ext_force(0);
+  result.force.y = wrench.ext_force(1);
+  result.force.z = wrench.ext_force(2);
+  result.torque.x = wrench.ext_torque(0);
+  result.torque.y = wrench.ext_torque(1);
+  result.torque.z = wrench.ext_torque(2);
 
   return result;
 }

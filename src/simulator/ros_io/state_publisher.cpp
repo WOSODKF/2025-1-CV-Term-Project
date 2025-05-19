@@ -14,10 +14,16 @@ void StatePublisher::pub() {
 void StatePublisher::update_state(const robot_state_t& robot_state) {
   // TODO: convert robot_data into _last_state_msg
   _last_state_msg.t = robot_state.t;
+
   _last_state_msg.end_pos = eigen_to_point_msg(robot_state.end_pos);
   auto end_quat = Quaterniond(robot_state.end_rot);
   end_quat.normalize();
   _last_state_msg.end_quat = eigen_to_quat_msg(end_quat);
+
+  _last_state_msg.cam_pos = eigen_to_point_msg(robot_state.cam_pos);
+  auto cam_quat = Quaterniond(robot_state.cam_rot);
+  cam_quat.normalize();
+  _last_state_msg.cam_quat = eigen_to_quat_msg(cam_quat);
 
   _last_state_msg.joint_pos_0 = robot_state.joint_pos_0;
   _last_state_msg.joint_pos_1 = robot_state.joint_pos_1;

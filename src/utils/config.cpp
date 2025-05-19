@@ -15,7 +15,9 @@ inline value_t get_or_die(ros::NodeHandle& node, std::string name) {
 
 sim_param_t get_sim_param(YAML::Node node) {
   return sim_param_t {
-    .g = node["g"].as<double>(), .measure_on = node["measure_on"].as<bool>()};
+    .g = node["g"].as<double>(),
+    .FPS = node["FPS"].as<double>(),
+    .measure_on = node["measure_on"].as<bool>()};
 }
 
 robot_param_t get_robot_param(YAML::Node node) {
@@ -29,6 +31,20 @@ robot_param_t get_robot_param(YAML::Node node) {
     .l5E = node["l5E"].as<double>()};
 }
 
+robot_IK_param_t get_IK_param(YAML::Node node) {
+  return robot_IK_param_t {
+    .lambda = node["lambda"].as<double>(),
+    .Kw = node["Kw"].as<double>(),
+    .Kp = node["Kp"].as<double>()};
+}
+
+camera_param_t get_camera_param(YAML::Node node) {
+  return camera_param_t {
+    .fovy = node["fovy"].as<int>(),
+    .width = node["width"].as<int>(),
+    .height = node["height"].as<int>()};
+}
+
 std::shared_ptr<config_t> get_config() {
   ros::NodeHandle node("~");
 
@@ -38,5 +54,7 @@ std::shared_ptr<config_t> get_config() {
   return std::make_shared<config_t>(config_t {
     .xml_file = get_or_die<std::string>(node, "xml_file"),
     .sim = get_sim_param(ynode["sim"]),
-    .robot = get_robot_param(ynode["robot"])});
+    .robot = get_robot_param(ynode["robot"]),
+    .IK = get_IK_param(ynode["IK"]),
+    .camera = get_camera_param(ynode["camera"])});
 }

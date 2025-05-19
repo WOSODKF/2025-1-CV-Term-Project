@@ -1,2 +1,0 @@
-geometry_msgs/Vector3 ext_force
-geometry_msgs/Vector3 ext_torque

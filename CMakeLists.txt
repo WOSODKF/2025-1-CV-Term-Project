@@ -30,12 +30,12 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   DIRECTORY msg
   FILES
-  robotWrench.msg
   setpoint.msg
   robotState.msg
+  robotMeasurement.msg
 )
 
-generate_messages(DEPENDENCIES std_msgs geometry_msgs)
+generate_messages(DEPENDENCIES std_msgs geometry_msgs sensor_msgs)
 
 catkin_package()
 

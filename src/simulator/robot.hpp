@@ -6,7 +6,6 @@
 #include "simulator/ros_io/setpoint_subscriber.hpp"
 #include "simulator/ros_io/measurement_publisher.hpp"
 #include "simulator/ros_io/state_publisher.hpp"
-#include "simulator/ros_io/view_publisher.hpp"
 
 #include "mujoco/mujoco.h"
 #include <GLFW/glfw3.h>
@@ -46,6 +45,7 @@ public:
 
 private:
   int _agent_ID;
+  robot_IK_param_t _ik_param; // in config
   robot_FK_param_t _fk_param;
   robot_state_t _current_state;
   mujoco_control_id_t _mj_ID;

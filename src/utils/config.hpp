@@ -5,6 +5,7 @@
 
 struct sim_param_t{
   double g;
+  double FPS;
   bool measure_on;
 };
 
@@ -18,10 +19,24 @@ struct robot_param_t {
   double l5E;
 };
 
-struct config_t{
+struct robot_IK_param_t{
+  double lambda;
+  double Kw;
+  double Kp;
+};
+
+struct camera_param_t{
+  int fovy;
+  int width;
+  int height;
+};
+
+struct config_t {
   std::string xml_file;
   sim_param_t sim;
   robot_param_t robot;
+  robot_IK_param_t IK;
+  camera_param_t camera;
 };
 
 std::shared_ptr<config_t> get_config();
