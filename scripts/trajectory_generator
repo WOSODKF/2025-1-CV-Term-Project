@@ -61,22 +61,35 @@ def run():
         pub = rospy.Publisher(pub_topic_name, setpoint, queue_size=10)
         state_sub = StateSubscriber(agent_ID)
         rate = rospy.Rate(10)
-        while not rospy.is_shutdown():
-            '''
-            1st phase: approach(in_fixed_point until converging)
-            2nd phase: grasp(hold at current position and wait)
-            3rd phase: manipulate
-            '''
-            
-            points = [[0.5, 0.5, 0.5],
-                    [0.5, -0.5, 0.5],
-                    [-0.5, -0.5, 0.5],
-                    [-0.5, 0.5, 0.5]]
-            
-            eulers=[[np.pi*3/4, 0, 0],
+        while not rospy.is_shutdown():  
+            if state_sub.latest_msg.t < 10:          
+                points = [[0.5, 0.5, 0.5],
+                        [0.5, -0.5, 0.5],
+                        [-0.5, -0.5, 0.5],
+                        [-0.5, 0.5, 0.5]]
+                eulers=[[np.pi*3/4, 0, 0],
                     [np.pi/4, 0, 0],
                     [-np.pi/4, 0, 0],
                     [-np.pi*3/4, 0, 0]]
+            elif state_sub.latest_msg.t < 30:
+                points = [[0.7, 0.0, 0.6],
+                        [0.0, -0.7, 0.6],
+                        [-0.7, 0.0, 0.6],
+                        [0.0, 0.7, 0.6]]
+                eulers=[[np.pi/2, 0, 0],
+                    [0, 0, 0],
+                    [-np.pi/2, 0, 0],
+                    [-np.pi, 0, 0]]
+            else:
+                points = [[0.7, 0.0, 1.0],
+                        [0.0, -0.7, 1.0],
+                        [-0.7, 0.0, 1.0],
+                        [0.0, 0.7, 1.0]]
+                eulers=[[np.pi/2, 0, 0],
+                    [0, 0, 0],
+                    [-np.pi/2, 0, 0],
+                    [-np.pi, 0, 0]]
+                
 
             msg = in_fixed_pose(points[agent_ID], zyx_euler_to_quat(eulers[agent_ID], in_degree=False))
             

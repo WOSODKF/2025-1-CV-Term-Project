@@ -17,7 +17,9 @@ sim_param_t get_sim_param(YAML::Node node) {
   return sim_param_t {
     .g = node["g"].as<double>(),
     .FPS = node["FPS"].as<double>(),
-    .measure_on = node["measure_on"].as<bool>()};
+    .measure_on = node["measure_on"].as<bool>(),
+    .render_view = node["render_view"].as<bool>(),
+    .duration_check = node["duration_check"].as<bool>()};
 }
 
 robot_param_t get_robot_param(YAML::Node node) {

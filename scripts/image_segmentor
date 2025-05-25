@@ -1,0 +1,41 @@
+#!/bin/python3
+import os
+import sys
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(script_dir)
+
+import numpy as np
+import rospy
+from cv_project.msg import setpoint, robotState, robotMeasurement
+from utils.math_utils import *
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+from ultralytics import YOLO
+import cv2
+import torch
+
+# Image segementation node - by YOLOv8
+
+class ImageSubscriber:
+    def __init__(self):
+        pass
+    
+class ResultPublisher:
+    def __init__(self):
+        pass
+
+class ImageSegmentor:
+    def __init__(self):
+        self.model = YOLO("yolov8n-seg.pt")
+        self.bridge = CvBridge()
+        self.img_sub = ImageSubscriber()
+        self.res_pub = ResultPublisher()
+    
+    def run(self):
+        while not rospy.is_shutdown():
+            pass
+
+if __name__ == '__main__':
+    segmentor = ImageSegmentor()
+    segmentor.run()

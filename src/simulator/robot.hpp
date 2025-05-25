@@ -45,7 +45,8 @@ public:
 
 private:
   int _agent_ID;
-  robot_IK_param_t _ik_param; // in config
+  bool _render_view;
+  robot_IK_param_t _ik_param;  // in config
   robot_FK_param_t _fk_param;
   robot_state_t _current_state;
   mujoco_control_id_t _mj_ID;

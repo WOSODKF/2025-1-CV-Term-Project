@@ -34,7 +34,7 @@
     <!-- <light name="spotlight_1" mode="targetbodycom" target="wrist_z_link_1" pos="0 -1 2"/> -->
     <body name="base_1" euler="0 0 0" pos="0 -1.0 0" childclass="ur5e">
       <inertial mass="4.0" pos="0 0 0" diaginertia="0.004433 0.004433 0.0072"/>
-      <geom type="cylinder" size="0.09 0.05" rgba="0.3 0.3 0.3 1"/>
+      <geom type="cylinder" size="0.09 0.05" rgba="0.3 0.8 0.3 1"/>
       <body name="shoulder_link_1" pos="0 0 0.163">
         <inertial mass="3.7" pos="0 0 0" diaginertia="0.01027 0.01027 0.00666"/>
         <joint name="shoulder_pan_joint_1" class="size3" axis="0 0 1"/>

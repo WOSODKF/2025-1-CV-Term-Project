@@ -16,7 +16,7 @@ MeasurementPublisher::MeasurementPublisher(
 
 void MeasurementPublisher::pub() {
   // _wrench_pub.publish(_last_wrench_msg);
-  _view_pub.publish(_last_view_msg);  // for rqt_image_view
+  _view_pub.publish(_last_view_msg);  // for rqt_image_view (not for processing)
   _data_pub.publish(_last_msg);
 }
 

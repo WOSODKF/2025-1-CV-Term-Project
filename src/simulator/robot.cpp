@@ -6,6 +6,7 @@ Robot::Robot(
     : _agent_ID(agent_ID) {
   _last_control.reset_control();
   _mj_ID.set_id(m, agent_ID);
+  _render_view = config->sim.render_view;
 
   int body_ID = _mj_ID._first_body_ID;
   auto base_pos = Eigen::Vector3d(
@@ -27,7 +28,8 @@ Robot::Robot(
 
 void Robot::compute_control(const mjModel* m, const mjData* d) {
   // update state
-  _current_state.update_state(d, _mj_ID._first_qpos_ID, _mj_ID._grasp_site_ID, _mj_ID._cam_ID);
+  _current_state.update_state(
+    d, _mj_ID._first_qpos_ID, _mj_ID._grasp_site_ID, _mj_ID._cam_ID);
   // measurement (may need some computation / MBO / etc.)
   // _measured_data.update_data(force, torque);
   // _measured_wrench.init_wrench();  // temp
@@ -73,14 +75,19 @@ void Robot::update_wrench(const mjModel* m, mjData* d) {
   force.setZero();
   torque.setZero();
   /*----TODO: get constraint force and torque from efc_force-----*/
-  // if(_agent_ID == 1){
+  // if (_agent_ID == 1) {
   //   std::string name = "grasp_" + std::to_string(_agent_ID);
   //   int equality_id = mj_name2id(m, mjOBJ_EQUALITY, name.c_str());
   //   std::cout << "nefc:" << d->nefc << std::endl;
   //   std::cout << "equality ID:" << equality_id << std::endl;
+  //   std::cout << "grasp_equality_ID: " << _mj_ID._grasp_equality_ID
+  //             << std::endl;
   //   std::cout << "efc_force:" << std::endl;
-  //   for (int i = 0; i < 6; i++) {
-  //     std::cout << d->efc_force[_mj_ID._grasp_equality_ID + i] << " ";
+  //   // for (int i = 0; i < 6; i++) {
+  //   //   std::cout << d->efc_force[6*equality_id + i] << " ";
+  //   // }
+  //   for (int i = 0; i < 24; i++) {
+  //     std::cout << d->efc_force[i] << " ";
   //   }
   //   std::cout << std::endl;
   // }
@@ -90,6 +97,9 @@ void Robot::update_wrench(const mjModel* m, mjData* d) {
   - but equality ID for grasp does not change
   - may have to implement MBO...
   */
+  auto equality_ID = _mj_ID._grasp_equality_ID;
+  force << d->efc_force[6 * equality_ID], d->efc_force[6 * equality_ID + 1],
+    d->efc_force[6 * equality_ID];
 
   /*-------------------------------------------------------------*/
   _last_wrench.update_wrench(force, torque);
@@ -102,6 +112,11 @@ void Robot::update_view(
   const int WIDTH = viewport.width;
   const int HEIGHT = viewport.height;
   unsigned char rgb_buffer[WIDTH * HEIGHT * 3];
+
+  if (!_render_view) {
+    _last_view = cv::Mat(HEIGHT, WIDTH, CV_8UC3, rgb_buffer);
+    return;
+  }
 
   cam.type = mjCAMERA_FIXED;
   cam.fixedcamid = cam_ID;
@@ -128,7 +143,8 @@ void Robot::publish_state() {
 void Robot::publish_measurement() {
   _measurement_pub->update_wrench(_last_wrench);
   _measurement_pub->update_view(_last_view);
-  _measurement_pub->update_state(_current_state); // should be called after updating view and wrench
+  _measurement_pub->update_state(
+    _current_state);  // should be called after updating view and wrench
 
   _measurement_pub->pub();
 }

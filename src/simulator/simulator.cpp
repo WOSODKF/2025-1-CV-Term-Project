@@ -252,7 +252,7 @@ void Simulator::run() {
         scene_render_end - robot_render_end);
     auto net_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
       scene_render_end - comp_start);
-    if (_run) {
+    if (_run && _config->sim.duration_check) {
       std::cout << "[Durations]------" << std::endl;
       std::cout << "sim time: " << _data->time << "s" << std::endl
                 << "dynamics: " << dyna_duration.count() << "ms" << std::endl
