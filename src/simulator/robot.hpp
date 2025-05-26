@@ -13,9 +13,12 @@
 #include <Eigen/Dense>
 #include <memory>
 #include <functional>
+#include <filesystem>
+#include <chrono>
 
 #include <ros/node_handle.h>
 #include <ros/subscriber.h>
+#include <ros/package.h>
 
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
@@ -35,7 +38,7 @@ public:
 
   void update_view(
     const mjModel* m, mjData* d, mjvOption& opt, mjvCamera& cam, mjvScene& scn,
-    mjrContext& con, const mjrRect& viewport);
+    mjrContext& con, const mjrRect& viewport, bool data_gen_mode);
   void update_wrench(const mjModel* m, mjData* d);
   void publish_state();
   void publish_measurement();
@@ -46,6 +49,8 @@ public:
 private:
   int _agent_ID;
   bool _render_view;
+  std::string _dataset_code;
+
   robot_IK_param_t _ik_param;  // in config
   robot_FK_param_t _fk_param;
   robot_state_t _current_state;

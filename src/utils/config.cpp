@@ -18,8 +18,10 @@ sim_param_t get_sim_param(YAML::Node node) {
     .g = node["g"].as<double>(),
     .FPS = node["FPS"].as<double>(),
     .measure_on = node["measure_on"].as<bool>(),
+    .measure_start_time = node["measure_start_time"].as<double>(),
     .render_view = node["render_view"].as<bool>(),
-    .duration_check = node["duration_check"].as<bool>()};
+    .duration_check = node["duration_check"].as<bool>(),
+    .data_gen_mode = node["data_gen_mode"].as<bool>()};
 }
 
 robot_param_t get_robot_param(YAML::Node node) {

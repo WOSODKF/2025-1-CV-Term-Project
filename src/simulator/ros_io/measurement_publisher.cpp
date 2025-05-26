@@ -40,10 +40,10 @@ void MeasurementPublisher::update_wrench(
   _last_wrench_msg = eigen_to_wrench_msg(robot_wrench);
 }
 
-void MeasurementPublisher::update_view(const cv::Mat& rgb_img) {
-  cv::Mat rgb_flipped, bgr_img;
-  cv::flip(rgb_img, rgb_flipped, 0);
-  cv::cvtColor(rgb_flipped, bgr_img, cv::COLOR_RGB2BGR);
+void MeasurementPublisher::update_view(const cv::Mat& bgr_img) {
+  // cv::Mat rgb_flipped, bgr_img;
+  // cv::flip(rgb_img, rgb_flipped, 0);
+  // cv::cvtColor(rgb_flipped, bgr_img, cv::COLOR_RGB2BGR);
 
   auto cam_ID = _agent_ID;
   sensor_msgs::ImagePtr msg =

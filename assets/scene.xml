@@ -12,7 +12,7 @@
   <size memory="20M"/>
 
   <visual>
-    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0 0 0" active="1"/>
     <rgba haze="0.15 0.25 0.35 1"/>
     <global azimuth="-20" elevation="-20" ellipsoidinertia="true"/>
   </visual>
@@ -26,7 +26,7 @@
 
   <worldbody>
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
-    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" contype="1" conaffinity="65535"/>
+    <geom name="floor" size="0 0 0.05" type="plane" rgba="0.5 0.2 0.2 1.0" contype="1" conaffinity="65535"/>
 
   </worldbody>
 

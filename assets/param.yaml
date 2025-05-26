@@ -2,8 +2,10 @@ sim:
   g: 9.81
   FPS: 60.0
   measure_on: true
-  render_view: false
+  measure_start_time: 4.0
+  render_view: true
   duration_check: false
+  data_gen_mode: true
   # measure_rate: 30
   
 robot:

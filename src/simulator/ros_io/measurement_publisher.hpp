@@ -19,7 +19,7 @@ public:
 
   void update_state(const robot_state_t& state);
   void update_wrench(const mujoco_robot_wrench_t& robot_wrench);
-  void update_view(const cv::Mat& rgb_img);
+  void update_view(const cv::Mat& bgr_img);
 
 private:
   ros::Publisher _view_pub;

@@ -7,8 +7,10 @@ struct sim_param_t{
   double g;
   double FPS;
   bool measure_on;
+  double measure_start_time;
   bool render_view;
   bool duration_check;
+  bool data_gen_mode;
 };
 
 struct robot_param_t {

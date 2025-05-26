@@ -62,7 +62,7 @@ def run():
         state_sub = StateSubscriber(agent_ID)
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():  
-            if state_sub.latest_msg.t < 10:          
+            if state_sub.latest_msg.t < 5:          
                 points = [[0.5, 0.5, 0.5],
                         [0.5, -0.5, 0.5],
                         [-0.5, -0.5, 0.5],
@@ -72,14 +72,18 @@ def run():
                     [-np.pi/4, 0, 0],
                     [-np.pi*3/4, 0, 0]]
             elif state_sub.latest_msg.t < 30:
-                points = [[0.7, 0.0, 0.6],
-                        [0.0, -0.7, 0.6],
-                        [-0.7, 0.0, 0.6],
-                        [0.0, 0.7, 0.6]]
-                eulers=[[np.pi/2, 0, 0],
-                    [0, 0, 0],
-                    [-np.pi/2, 0, 0],
-                    [-np.pi, 0, 0]]
+                # points = [[0.7, 0.0, 0.6],
+                #         [0.0, -0.7, 0.6],
+                #         [-0.7, 0.0, 0.6],
+                #         [0.0, 0.7, 0.6]]
+                points = [[0.9, 0.0, 0.7],
+                        [0.0, -0.9, 0.7],
+                        [-0.9, 0.0, 0.7],
+                        [0.0, 0.9, 0.7]]
+                eulers=[[np.pi/2, np.pi/6, 0],
+                    [0, np.pi/6, 0],
+                    [-np.pi/2, np.pi/6, 0],
+                    [-np.pi, np.pi/6   , 0]]
             else:
                 points = [[0.7, 0.0, 1.0],
                         [0.0, -0.7, 1.0],

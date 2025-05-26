@@ -196,13 +196,17 @@ void Simulator::run() {
     auto dyna_end = std::chrono::steady_clock::now();
 
     // update measurement & publish (after integration -> 60Hz)
-    if (_config->sim.measure_on && _run) {
+    if (
+      _config->sim.measure_on && _run &&
+      _data->time > _config->sim.measure_start_time) {
       for (int id = 0; id < _agent_num; id++) {
         // render robot view & publish
+        bool data_gen_mode = _config->sim.data_gen_mode &&
+          (std::ceil(5 * _data->time) != std::ceil(5 * simstart));
         _robot[id]->update_wrench(_model, _data);
         _robot[id]->update_view(
           _model, _data, _option, _robot_camera, _scene, _context,
-          _robot_viewport);
+          _robot_viewport, data_gen_mode);
 
         _robot[id]->publish_measurement();
       }

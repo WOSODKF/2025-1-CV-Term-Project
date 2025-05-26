@@ -8,6 +8,14 @@ Robot::Robot(
   _mj_ID.set_id(m, agent_ID);
   _render_view = config->sim.render_view;
 
+  auto now = std::chrono::system_clock::now();
+  std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+  std::tm* tm = std::localtime(&now_c);
+
+  std::stringstream ss;
+  ss << std::put_time(tm, "%m%d_%H%M");
+  _dataset_code = ss.str();
+
   int body_ID = _mj_ID._first_body_ID;
   auto base_pos = Eigen::Vector3d(
     d->xpos[3 * body_ID], d->xpos[3 * body_ID + 1], d->xpos[3 * body_ID + 2]);
@@ -107,7 +115,7 @@ void Robot::update_wrench(const mjModel* m, mjData* d) {
 
 void Robot::update_view(
   const mjModel* m, mjData* d, mjvOption& opt, mjvCamera& cam, mjvScene& scn,
-  mjrContext& con, const mjrRect& viewport) {
+  mjrContext& con, const mjrRect& viewport, bool data_gen_mode) {
   int cam_ID = _agent_ID;
   const int WIDTH = viewport.width;
   const int HEIGHT = viewport.height;
@@ -130,9 +138,45 @@ void Robot::update_view(
   // Read pixels (RGB only here)
   mjr_readPixels(rgb_buffer, NULL, viewport, &con);
 
-  // Get RGB image
+  // Get image
   cv::Mat rgb_img(HEIGHT, WIDTH, CV_8UC3, rgb_buffer);
-  _last_view = rgb_img;
+  cv::Mat rgb_flipped, bgr_img;
+  cv::flip(rgb_img, rgb_flipped, 0);
+  cv::cvtColor(rgb_flipped, bgr_img, cv::COLOR_RGB2BGR);
+
+  _last_view = bgr_img;
+
+  // storing view as image
+  if (data_gen_mode) {
+    std::string dirname = ros::package::getPath("cv_project");
+    dirname = dirname + "/training_data/25" + _dataset_code;
+
+    if (!std::filesystem::exists(dirname)) {
+      if (!std::filesystem::create_directory(dirname)) {
+        std::cerr << "Failed to create directory!" << std::endl;
+      }
+    }
+
+    dirname = dirname + "/images/";
+
+    if (!std::filesystem::exists(dirname)) {
+      if (std::filesystem::create_directory(dirname)) {
+        std::cout << "Directory created: " << dirname << std::endl;
+      } else {
+        std::cerr << "Failed to create directory!" << std::endl;
+      }
+    }
+
+    std::string filename = _dataset_code + "_view_" +
+      std::to_string(_agent_ID) + "_" + std::to_string(d->time) + ".png";
+    bool success = cv::imwrite(dirname + filename, bgr_img);
+    if (success) {
+      std::cout << "Image stored in " << dirname + filename << std::endl;
+    } else {
+      std::cout << "Failed storing image at " << dirname + filename
+                << std::endl;
+    }
+  }
 }
 
 void Robot::publish_state() {
