@@ -10,7 +10,7 @@
 class ParamPublisher{
 public:
   ParamPublisher(ros::NodeHandle& node);
-  void update(const est_param_t& param);
+  void update(const est_mesh_param_t& param);
   void pub();
 
 private:

@@ -131,12 +131,14 @@ void mujoco_control_t::clip_control(double u_bound, double l_bound) {
 }
 
 void mujoco_robot_wrench_t::init_wrench() {
+  t = 0.0;
   ext_force.setZero();
   ext_torque.setZero();
 }
 
 void mujoco_robot_wrench_t::update_wrench(
-  const Vector3d& force, const Vector3d& torque) {
+  const Vector3d& force, const Vector3d& torque, double time) {
+  t = time;
   ext_force = force;
   ext_torque = torque;
 }

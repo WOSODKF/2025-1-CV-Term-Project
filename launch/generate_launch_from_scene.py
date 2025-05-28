@@ -48,7 +48,7 @@ seg_node = ET.SubElement(launch, "node",{
     "output": "$(arg output)"
 })
 ET.SubElement(seg_node, "param", name="param", value="$(arg param)")
-ET.SubElement(seg_node, "param", name="num_agent", value=str(agent_num))
+ET.SubElement(seg_node, "param", name="agent_num", value=str(agent_num))
 
 # mesh estimator node
 mesh_node = ET.SubElement(launch, "node",{
@@ -58,7 +58,7 @@ mesh_node = ET.SubElement(launch, "node",{
     "output": "$(arg output)"
 })
 ET.SubElement(mesh_node, "param", name="param", value="$(arg param)")
-ET.SubElement(mesh_node, "param", name="num_agent", value=str(agent_num))
+ET.SubElement(mesh_node, "param", name="agent_num", value=str(agent_num))
 
 # param estimator node
 param_node = ET.SubElement(launch, "node",{
@@ -68,7 +68,7 @@ param_node = ET.SubElement(launch, "node",{
     "output": "$(arg output)"
 })
 ET.SubElement(param_node, "param", name="param", value="$(arg param)")
-ET.SubElement(param_node, "param", name="num_agent", value=str(agent_num))
+ET.SubElement(param_node, "param", name="agent_num", value=str(agent_num))
 
 # Per-agent groups
 for i in agent_ids:

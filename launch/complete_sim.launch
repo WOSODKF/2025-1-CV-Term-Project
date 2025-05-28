@@ -10,15 +10,15 @@
   </node>
   <node name="segmentor" pkg="$(arg package)" type="image_segmentor" output="$(arg output)">
     <param name="param" value="$(arg param)"/>
-    <param name="num_agent" value="4"/>
+    <param name="agent_num" value="4"/>
   </node>
   <node name="mesh_estimator" pkg="($arg package)" type="mesh_estimator" output="$(arg output)">
     <param name="param" value="$(arg param)"/>
-    <param name="num_agent" value="4"/>
+    <param name="agent_num" value="4"/>
   </node>
   <node name="param_estimator" pkg="($arg package)" type="param_estimator" output="$(arg output)">
     <param name="param" value="$(arg param)"/>
-    <param name="num_agent" value="4"/>
+    <param name="agent_num" value="4"/>
   </node>
   <group ns="robot_0">
     <node name="trajectory_generator" pkg="$(arg package)" type="trajectory_generator" output="screen">

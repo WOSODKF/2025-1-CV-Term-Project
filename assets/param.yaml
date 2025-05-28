@@ -6,6 +6,10 @@ sim:
   render_view: true
   duration_check: false
   data_gen_mode: false
+
+mesh:
+  GT_mesh: false
+  mesh_init_time: 0.0
   # measure_rate: 30
   
 robot:

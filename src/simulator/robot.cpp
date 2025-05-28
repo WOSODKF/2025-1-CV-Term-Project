@@ -112,7 +112,7 @@ void Robot::update_wrench(const mjModel* m, mjData* d) {
     d->efc_force[6 * equality_ID + 4], d->efc_force[6 * equality_ID + 5];
 
   /*-------------------------------------------------------------*/
-  _last_wrench.update_wrench(force, torque);
+  _last_wrench.update_wrench(force, torque, d->time);
 }
 
 void Robot::update_view(

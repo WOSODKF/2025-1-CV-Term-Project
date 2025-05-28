@@ -5,7 +5,7 @@ ParamSubscriber::ParamSubscriber(ros::NodeHandle& node) {
   _sub = node.subscribe(topic_name, 3, &ParamSubscriber::callback, this);
 }
 
-est_param_t ParamSubscriber::get_data() {
+est_mesh_param_t ParamSubscriber::get_data() {
   return _last_param_data;
 }
 

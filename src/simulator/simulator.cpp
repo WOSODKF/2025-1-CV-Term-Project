@@ -23,6 +23,9 @@ int ROBOT_CAM_WIDTH, ROBOT_CAM_HEIGHT;
 mjvCamera _robot_camera;
 mjrRect _robot_viewport;
 
+// mesh init
+bool init_mesh_sent = false;
+
 void keyboard(GLFWwindow* window, int key, int scancode, int act, int mods) {
   // backspace: reset simulation
   if (act == GLFW_PRESS && key == GLFW_KEY_BACKSPACE) {
@@ -169,6 +172,7 @@ Simulator::Simulator(std::shared_ptr<config_t> config): _config(config) {
   _robot_viewport = {0, 0, ROBOT_CAM_WIDTH, ROBOT_CAM_HEIGHT};
 
   register_callback();
+  _mesh_pub = make_mesh_publisher(node, "GT");
 }
 
 Simulator::~Simulator() {
@@ -210,6 +214,17 @@ void Simulator::run() {
 
         _robot[id]->publish_measurement();
       }
+    }
+
+    // get mesh data and publish
+    bool init_mesh =
+      !init_mesh_sent && _data->time > _config->mesh.init_mesh_time;
+
+    if (init_mesh || _config->mesh.GT_mesh) {
+      /* TODO: get mesh data and update _mesh_pub */
+      // _mesh_pub->update();
+      _mesh_pub->pub();
+      init_mesh_sent = true;
     }
 
     auto robot_render_end = std::chrono::steady_clock::now();

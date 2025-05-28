@@ -3,6 +3,7 @@
 #include "simulator/robot.hpp"
 // #include "simulator/ros_io/setpoint_subscriber.hpp"
 // #include "simulator/ros_io/data_publisher.hpp"
+#include "utils/mesh_publisher.hpp"
 #include "utils/config.hpp"
 #include "utils/data_struct.hpp"
 
@@ -38,6 +39,7 @@ class Simulator {
 
     std::shared_ptr<config_t> _config;
     std::vector<std::shared_ptr<Robot>> _robot;
+    std::shared_ptr<MeshPublisher> _mesh_pub;
 
     // std::vector<std::shared_ptr<SetpointSubscriber>> _setpoint_sub;
     // std::vector<std::shared_ptr<DataPublisher>> _data_pub;

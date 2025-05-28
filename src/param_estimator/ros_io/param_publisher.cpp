@@ -9,7 +9,7 @@ void ParamPublisher::pub(){
   _pub.publish(_last_msg);
 }
 
-void ParamPublisher::update(const est_param_t& param){
+void ParamPublisher::update(const est_mesh_param_t& param){
     /* TODO */
 }
 

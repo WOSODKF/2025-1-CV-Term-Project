@@ -10,12 +10,12 @@
 class ParamSubscriber {
 public:
   ParamSubscriber(ros::NodeHandle& node);
-  est_param_t get_data();
+  est_mesh_param_t get_data();
 
 private:
   ros::Subscriber _sub;
   cv_project::estimatedParam _last_msg;
-  est_param_t _last_param_data;
+  est_mesh_param_t _last_param_data;
 
   void callback(cv_project::estimatedParam msg);
 };

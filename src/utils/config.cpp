@@ -24,6 +24,12 @@ sim_param_t get_sim_param(YAML::Node node) {
     .data_gen_mode = node["data_gen_mode"].as<bool>()};
 }
 
+mesh_sim_param_t get_mesh_param(YAML::Node node) {
+  return mesh_sim_param_t {
+    .GT_mesh = node["GT_mesh"].as<bool>(),
+    .init_mesh_time = node["init_mesh_time"].as<double>()};
+}
+
 robot_param_t get_robot_param(YAML::Node node) {
   return robot_param_t {
     .l01 = node["l01"].as<double>(),
@@ -58,6 +64,7 @@ std::shared_ptr<config_t> get_config() {
   return std::make_shared<config_t>(config_t {
     .xml_file = get_or_die<std::string>(node, "xml_file"),
     .sim = get_sim_param(ynode["sim"]),
+    .mesh = get_mesh_param(ynode["mesh"]),
     .robot = get_robot_param(ynode["robot"]),
     .IK = get_IK_param(ynode["IK"]),
     .camera = get_camera_param(ynode["camera"])});

@@ -75,11 +75,13 @@ struct fk_result_t {
 };
 
 struct mujoco_robot_wrench_t {
+  double t;
+
   Vector3d ext_force;
   Vector3d ext_torque;
 
   void init_wrench();
-  void update_wrench(const Vector3d& force, const Vector3d& torque /* TODO: include image */);
+  void update_wrench(const Vector3d& force, const Vector3d& torque, double time);
 };
 
 struct mujoco_control_t {
@@ -115,13 +117,18 @@ struct mask_data_t{
   /* TODO: fill the struct */
 };
 
-struct est_param_t{
+struct est_error_t{
   double t;
 
   /*TODO*/
 };
 
-struct est_error_t{
+struct mesh_data_t{
+  double t;
+  /*TODO*/
+};
+
+struct est_mesh_param_t{
   double t;
 
   /*TODO*/

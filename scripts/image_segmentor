@@ -51,6 +51,7 @@ class ImageSegmentor:
         self.init_ros_io(agent_num)
         
         while not rospy.is_shutdown():
+            # event-based operation
             pass
 
 if __name__ == '__main__':

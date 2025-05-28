@@ -13,6 +13,11 @@ struct sim_param_t{
   bool data_gen_mode;
 };
 
+struct mesh_sim_param_t{
+  bool GT_mesh;
+  double init_mesh_time;
+};
+
 struct robot_param_t {
   double l01;
   double l12x;
@@ -38,6 +43,7 @@ struct camera_param_t{
 struct config_t {
   std::string xml_file;
   sim_param_t sim;
+  mesh_sim_param_t mesh;
   robot_param_t robot;
   robot_IK_param_t IK;
   camera_param_t camera;

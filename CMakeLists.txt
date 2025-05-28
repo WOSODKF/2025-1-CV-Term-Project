@@ -36,6 +36,7 @@ add_message_files(
   clothMask.msg
   estimationError.msg
   estimatedParam.msg
+  mesh.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs geometry_msgs sensor_msgs)
