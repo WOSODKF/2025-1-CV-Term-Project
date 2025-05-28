@@ -86,6 +86,7 @@ target_compile_features(
 catkin_install_python(
   PROGRAMS
     scripts/trajectory_generator
+    scripts/image_segmentor
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

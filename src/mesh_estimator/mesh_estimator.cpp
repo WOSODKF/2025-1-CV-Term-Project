@@ -7,7 +7,7 @@ MeshEstimator::MeshEstimator(
   } else {
     ROS_ERROR("/mesh_estimator/agent_num is not found");
   }
-  //   _rate = config->sim.FPS;
+  //_rate = config->sim.FPS;
   _camera_param = config->camera;
 
   _mask = std::vector<mask_data_t>(_agent_num);

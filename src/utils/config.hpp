@@ -15,7 +15,7 @@ struct sim_param_t{
 
 struct mesh_sim_param_t{
   bool GT_mesh;
-  double init_mesh_time;
+  double mesh_init_time;
 };
 
 struct robot_param_t {

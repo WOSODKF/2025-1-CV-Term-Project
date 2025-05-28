@@ -5,6 +5,7 @@ from xml.dom import minidom
 scene_path = "../assets/scene.xml"
 output_launch_path = "complete_sim.launch"
 default_pkg = "cv_project"
+yolo_model_path = "../yolo_model/runs/segment/train/weights/best.pt"
 
 # === Parse scene.xml to count included agents ===
 tree = ET.parse(scene_path)
@@ -26,6 +27,7 @@ for name, default in [
     ("output", "screen"),
     ("xml_file", "$(dirname)/" + scene_path),
     ("param", "$(dirname)/../assets/param.yaml"),
+    ("model", "$(dirname)/" + yolo_model_path),
     ("package", default_pkg),
 ]:
     arg = ET.SubElement(launch, "arg", name=name, default=default)
@@ -49,6 +51,7 @@ seg_node = ET.SubElement(launch, "node",{
 })
 ET.SubElement(seg_node, "param", name="param", value="$(arg param)")
 ET.SubElement(seg_node, "param", name="agent_num", value=str(agent_num))
+ET.SubElement(seg_node, "param", name="model_dir", value="$(arg model)")
 
 # mesh estimator node
 mesh_node = ET.SubElement(launch, "node",{

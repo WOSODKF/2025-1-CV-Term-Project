@@ -4,6 +4,7 @@ compile_commands.json
 !.clang-format
 *.csv
 *.png
+*.jpg
 *.pyc
 image_processing_test
 training_data

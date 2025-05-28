@@ -27,7 +27,7 @@ sim_param_t get_sim_param(YAML::Node node) {
 mesh_sim_param_t get_mesh_param(YAML::Node node) {
   return mesh_sim_param_t {
     .GT_mesh = node["GT_mesh"].as<bool>(),
-    .init_mesh_time = node["init_mesh_time"].as<double>()};
+    .mesh_init_time = node["mesh_init_time"].as<double>()};
 }
 
 robot_param_t get_robot_param(YAML::Node node) {
