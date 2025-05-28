@@ -11,18 +11,29 @@ MeasurementPublisher::MeasurementPublisher(
   _view_pub = node.advertise<sensor_msgs::Image>(view_topic_name, 32);
 
   std::string topic_name = "measurement_" + std::to_string(agent_ID);
-  _data_pub = node.advertise<cv_project::robotMeasurement>(topic_name, 32);
+  _measurement_pub =
+    node.advertise<cv_project::robotMeasurement>(topic_name, 32);
 }
 
 void MeasurementPublisher::pub() {
   // _wrench_pub.publish(_last_wrench_msg);
   _view_pub.publish(_last_view_msg);  // for rqt_image_view (not for processing)
-  _data_pub.publish(_last_msg);
+  _measurement_pub.publish(_last_msg);
+}
+
+void MeasurementPublisher::update(
+  const robot_state_t& state, const mujoco_robot_wrench_t& robot_wrench,
+  const cv::Mat& bgr_img) {
+  update_state(state);
+  update_wrench(robot_wrench);
+  update_view(bgr_img, state.t);
 }
 
 void MeasurementPublisher::update_state(const robot_state_t& state) {
-  _last_msg.wrench = _last_wrench_msg;
-  _last_msg.view = *_last_view_msg;
+  auto time = ros::Time(state.t);
+
+  _last_msg.header.stamp = time;
+  _last_msg.header.frame_id = "robot_" + std::to_string(_agent_ID);
 
   _last_msg.end_pos = eigen_to_point_msg(state.end_pos);
   auto end_quat = Quaterniond(state.end_rot);
@@ -37,18 +48,15 @@ void MeasurementPublisher::update_state(const robot_state_t& state) {
 
 void MeasurementPublisher::update_wrench(
   const mujoco_robot_wrench_t& robot_wrench) {
-  _last_wrench_msg = eigen_to_wrench_msg(robot_wrench);
+  _last_msg.wrench = eigen_to_wrench_msg(robot_wrench);
+  // _last_wrench_msg = _last_msg.wrench;
 }
 
-void MeasurementPublisher::update_view(const cv::Mat& bgr_img) {
-  // cv::Mat rgb_flipped, bgr_img;
-  // cv::flip(rgb_img, rgb_flipped, 0);
-  // cv::cvtColor(rgb_flipped, bgr_img, cv::COLOR_RGB2BGR);
-
+void MeasurementPublisher::update_view(const cv::Mat& bgr_img, double time) {
   auto cam_ID = _agent_ID;
   sensor_msgs::ImagePtr msg =
     cv_bridge::CvImage(std_msgs::Header(), "bgr8", bgr_img).toImageMsg();
-  msg->header.stamp = ros::Time::now();
+  msg->header.stamp = ros::Time(time);
   msg->header.frame_id = "camera_frame_" + std::to_string(cam_ID);
 
   _last_view_msg = msg;

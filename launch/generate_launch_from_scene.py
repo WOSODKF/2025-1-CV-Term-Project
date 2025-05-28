@@ -40,6 +40,36 @@ sim_node = ET.SubElement(launch, "node", {
 ET.SubElement(sim_node, "param", name="xml_file", value="$(arg xml_file)")
 ET.SubElement(sim_node, "param", name="param", value="$(arg param)")
 
+# segmentor node
+seg_node = ET.SubElement(launch, "node",{
+    "name": "segmentor",
+    "pkg": "$(arg package)",
+    "type": "image_segmentor",
+    "output": "$(arg output)"
+})
+ET.SubElement(seg_node, "param", name="param", value="$(arg param)")
+ET.SubElement(seg_node, "param", name="num_agent", value=str(agent_num))
+
+# mesh estimator node
+mesh_node = ET.SubElement(launch, "node",{
+    "name": "mesh_estimator",
+    "pkg": "($arg package)",
+    "type": "mesh_estimator",
+    "output": "$(arg output)"
+})
+ET.SubElement(mesh_node, "param", name="param", value="$(arg param)")
+ET.SubElement(mesh_node, "param", name="num_agent", value=str(agent_num))
+
+# param estimator node
+param_node = ET.SubElement(launch, "node",{
+    "name": "param_estimator",
+    "pkg": "($arg package)",
+    "type": "param_estimator",
+    "output": "$(arg output)"
+})
+ET.SubElement(param_node, "param", name="param", value="$(arg param)")
+ET.SubElement(param_node, "param", name="num_agent", value=str(agent_num))
+
 # Per-agent groups
 for i in agent_ids:
     group = ET.SubElement(launch, "group", ns=f"robot_{i}")
@@ -52,7 +82,7 @@ for i in agent_ids:
     })
     ET.SubElement(setpoint, "param", name="agent_id", value=str(i))
     ET.SubElement(setpoint, "param", name="param", value="$(arg param)")
-    
+
 # === Pretty-print to file ===
 def pretty_print(elem):
     rough = ET.tostring(elem, "utf-8")

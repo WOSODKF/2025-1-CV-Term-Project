@@ -80,8 +80,8 @@ void Robot::set_mujoco_control(const mjModel* m, mjData* d) {
 void Robot::update_wrench(const mjModel* m, mjData* d) {
   Eigen::Vector3d force, torque;
   //(temp)
-  force.setZero();
-  torque.setZero();
+  // force.setZero();
+  // torque.setZero();
   /*----TODO: get constraint force and torque from efc_force-----*/
   // if (_agent_ID == 1) {
   //   std::string name = "grasp_" + std::to_string(_agent_ID);
@@ -107,7 +107,9 @@ void Robot::update_wrench(const mjModel* m, mjData* d) {
   */
   auto equality_ID = _mj_ID._grasp_equality_ID;
   force << d->efc_force[6 * equality_ID], d->efc_force[6 * equality_ID + 1],
-    d->efc_force[6 * equality_ID];
+    d->efc_force[6 * equality_ID + 2];
+  torque << d->efc_force[6 * equality_ID + 3],
+    d->efc_force[6 * equality_ID + 4], d->efc_force[6 * equality_ID + 5];
 
   /*-------------------------------------------------------------*/
   _last_wrench.update_wrench(force, torque);
@@ -185,11 +187,7 @@ void Robot::publish_state() {
 }
 
 void Robot::publish_measurement() {
-  _measurement_pub->update_wrench(_last_wrench);
-  _measurement_pub->update_view(_last_view);
-  _measurement_pub->update_state(
-    _current_state);  // should be called after updating view and wrench
-
+  _measurement_pub->update(_current_state, _last_wrench, _last_view);
   _measurement_pub->pub();
 }
 

@@ -33,6 +33,9 @@ add_message_files(
   setpoint.msg
   robotState.msg
   robotMeasurement.msg
+  clothMask.msg
+  estimationError.msg
+  estimatedParam.msg
 )
 
 generate_messages(DEPENDENCIES std_msgs geometry_msgs sensor_msgs)

@@ -1,4 +1,4 @@
-float64 t
+std_msgs/Header header
 
 float64 joint_pos_0
 float64 joint_pos_1

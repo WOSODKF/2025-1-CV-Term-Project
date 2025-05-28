@@ -1,6 +1,6 @@
 #include "simulator/ros_io/state_publisher.hpp"
 
-StatePublisher::StatePublisher(ros::NodeHandle& node, int agent_ID){
+StatePublisher::StatePublisher(ros::NodeHandle& node, int agent_ID) {
   std::string topic_name = "state_" + std::to_string(agent_ID);
   _data_pub = node.advertise<cv_project::robotState>(topic_name, 32);
   // TODO: initialize _last_state_msg
@@ -13,7 +13,9 @@ void StatePublisher::pub() {
 
 void StatePublisher::update_state(const robot_state_t& robot_state) {
   // TODO: convert robot_data into _last_state_msg
-  _last_state_msg.t = robot_state.t;
+  auto time = ros::Time(robot_state.t);
+  _last_state_msg.header.stamp = time;
+  _last_state_msg.header.frame_id = "robot_" + std::to_string(_agent_ID);
 
   _last_state_msg.end_pos = eigen_to_point_msg(robot_state.end_pos);
   auto end_quat = Quaterniond(robot_state.end_rot);

@@ -48,6 +48,19 @@ struct robot_state_t {
   void update_state(const mjData* d, int first_qpos_ID, int end_site_ID, int cam_ID);
 };
 
+struct robot_measurement_t{
+  double t;
+
+  Vector3d end_pos;
+  Matrix3d end_rot;
+
+  Vector3d cam_pos;
+  Matrix3d cam_rot;
+
+  Vector3d ext_force;
+  Vector3d ext_torque;
+};
+
 struct setpoint_t {
   Vector3d end_pos;
   Matrix3d end_rot;
@@ -95,6 +108,25 @@ struct mujoco_control_id_t {
 
   void set_id(const mjModel* m, int agent_ID);
 };
+
+struct mask_data_t{
+  double t;
+
+  /* TODO: fill the struct */
+};
+
+struct est_param_t{
+  double t;
+
+  /*TODO*/
+};
+
+struct est_error_t{
+  double t;
+
+  /*TODO*/
+};
+
 //
 // mujoco_control_t inverse_kinematics(
 //   const setpoint_t& setpoint, const setpoint_t& zero_config,

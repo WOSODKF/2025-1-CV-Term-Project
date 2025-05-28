@@ -17,22 +17,39 @@ import torch
 
 # Image segementation node - by YOLOv8
 
-class ImageSubscriber:
-    def __init__(self):
+class ViewSubscriber:
+    def __init__(self, agent_ID):
+        self.agent_ID = agent_ID
         pass
     
-class ResultPublisher:
-    def __init__(self):
+    def callback():
         pass
+    
+class MaskPublisher:
+    def __init__(self, agent_ID):
+        self.agent_ID = agent_ID
+        pass
+    
 
 class ImageSegmentor:
     def __init__(self):
         self.model = YOLO("yolov8n-seg.pt")
         self.bridge = CvBridge()
-        self.img_sub = ImageSubscriber()
-        self.res_pub = ResultPublisher()
+        
+    def init_ros_io(self, agent_num):
+        self.agent_num = agent_num
+        self.img_sub = []
+        self.mask_pub = []
+        
+        for i in range(agent_num):
+            self.img_sub.append(ViewSubscriber(i))
+            self.mask_pub.append(MaskPublisher(i))
     
     def run(self):
+        rospy.init_node("segmentor")
+        agent_num = rospy.get_param("~agent_num")
+        self.init_ros_io(agent_num)
+        
         while not rospy.is_shutdown():
             pass
 
