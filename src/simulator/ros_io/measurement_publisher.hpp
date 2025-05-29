@@ -15,10 +15,10 @@
 class MeasurementPublisher {
 public:
   MeasurementPublisher(ros::NodeHandle& node, int agent_ID, int cam_ID);
-  void pub();
-  void update(
-    const robot_state_t& state, const mujoco_robot_wrench_t& robot_wrench,
-    const cv::Mat& bgr_img);
+  void pub_view();
+  void pub_measurement();
+  void update_measurement(const robot_state_t& state, const mujoco_robot_wrench_t& robot_wrench);
+  void update_view(const cv::Mat& bgr_img, double time);
 
 private:
   ros::Publisher _view_pub;
@@ -27,13 +27,8 @@ private:
   int _agent_ID;
   int _cam_ID;
 
-  geometry_msgs::Wrench _last_wrench_msg;
   sensor_msgs::ImagePtr _last_view_msg;
-  cv_project::robotMeasurement _last_msg;
-
-  void update_state(const robot_state_t& state);
-  void update_wrench(const mujoco_robot_wrench_t& robot_wrench);
-  void update_view(const cv::Mat& bgr_img, double time);
+  cv_project::robotMeasurement _last_measurement_msg;  
 };
 
 std::shared_ptr<MeasurementPublisher> make_measurement_publisher(

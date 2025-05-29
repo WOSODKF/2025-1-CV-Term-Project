@@ -1,16 +1,23 @@
 sim:
   g: 9.81
-  FPS: 60.0
-  measure_on: true
-  measure_start_time: 0.0
-  render_view: true
+  sim_render_rate: 60.0
   duration_check: false
   data_gen_mode: false
 
+view:
+  render_view: true
+  view_pub_rate: 30.0     # effective: denominator of sim_render_rate
+
+measure:
+  measure_on: true
+  measure_pub_rate: 30.0  # effective: denominator of sim_render_rate
+  measure_start_time: 0.0
+
 mesh:
-  GT_mesh: false
+  GT_mesh: true
+  rows: 8
+  cols: 8  
   mesh_init_time: 0.0
-  # measure_rate: 30
   
 robot:
   l01: 0.163

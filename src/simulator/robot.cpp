@@ -6,7 +6,7 @@ Robot::Robot(
     : _agent_ID(agent_ID) {
   _last_control.reset_control();
   _mj_ID.set_id(m, agent_ID);
-  _render_view = config->sim.render_view;
+  _render_view = config->view.render_view;
 
   auto now = std::chrono::system_clock::now();
   std::time_t now_c = std::chrono::system_clock::to_time_t(now);
@@ -38,34 +38,14 @@ void Robot::compute_control(const mjModel* m, const mjData* d) {
   // update state
   _current_state.update_state(
     d, _mj_ID._first_qpos_ID, _mj_ID._grasp_site_ID, _mj_ID._cam_ID);
-  // measurement (may need some computation / MBO / etc.)
-  // _measured_data.update_data(force, torque);
-  // _measured_wrench.init_wrench();  // temp
 
   // compute control
   auto dt = m->opt.timestep;
   _last_control = inverse_kinematics(_setpoint_sub->setpoint(), dt);
 }
 
-// void Robot::update_robot_data(const mjModel* m, const mjData* d) {
-//   // TODO: update state & measurement
-//
-//   // state
-//   _current_state.update_state(d, _mj_ID._first_qpos_ID,
-//   _mj_ID._grasp_site_ID);
-//
-//
-// }
-
 void Robot::set_mujoco_control(const mjModel* m, mjData* d) {
   compute_control(m, d);
-  // std::cout << "current attachment position:"
-  //           << d->site_xpos[3 * _mj_ID._grasp_site_ID] << " "
-  //           << d->site_xpos[3 * _mj_ID._grasp_site_ID + 1] << " "
-  //           << d->site_xpos[3 * _mj_ID._grasp_site_ID + 2] << std::endl;
-  // std::cout << "base pos:" << d->xpos[3 * _mj_ID._first_body_ID] << " "
-  //           << d->xpos[3 * _mj_ID._first_body_ID + 1] << " "
-  //           << d->xpos[3 * _mj_ID._first_body_ID + 2] << std::endl;
 
   int first_act_ID = _mj_ID._first_act_ID;
 
@@ -79,39 +59,13 @@ void Robot::set_mujoco_control(const mjModel* m, mjData* d) {
 
 void Robot::update_wrench(const mjModel* m, mjData* d) {
   Eigen::Vector3d force, torque;
-  //(temp)
-  // force.setZero();
-  // torque.setZero();
-  /*----TODO: get constraint force and torque from efc_force-----*/
-  // if (_agent_ID == 1) {
-  //   std::string name = "grasp_" + std::to_string(_agent_ID);
-  //   int equality_id = mj_name2id(m, mjOBJ_EQUALITY, name.c_str());
-  //   std::cout << "nefc:" << d->nefc << std::endl;
-  //   std::cout << "equality ID:" << equality_id << std::endl;
-  //   std::cout << "grasp_equality_ID: " << _mj_ID._grasp_equality_ID
-  //             << std::endl;
-  //   std::cout << "efc_force:" << std::endl;
-  //   // for (int i = 0; i < 6; i++) {
-  //   //   std::cout << d->efc_force[6*equality_id + i] << " ";
-  //   // }
-  //   for (int i = 0; i < 24; i++) {
-  //     std::cout << d->efc_force[i] << " ";
-  //   }
-  //   std::cout << std::endl;
-  // }
 
-  /* Note
-  - efc_force includes constraints in cloth
-  - but equality ID for grasp does not change
-  - may have to implement MBO...
-  */
   auto equality_ID = _mj_ID._grasp_equality_ID;
   force << d->efc_force[6 * equality_ID], d->efc_force[6 * equality_ID + 1],
     d->efc_force[6 * equality_ID + 2];
   torque << d->efc_force[6 * equality_ID + 3],
     d->efc_force[6 * equality_ID + 4], d->efc_force[6 * equality_ID + 5];
 
-  /*-------------------------------------------------------------*/
   _last_wrench.update_wrench(force, torque, d->time);
 }
 
@@ -187,8 +141,13 @@ void Robot::publish_state() {
 }
 
 void Robot::publish_measurement() {
-  _measurement_pub->update(_current_state, _last_wrench, _last_view);
-  _measurement_pub->pub();
+  _measurement_pub->update_measurement(_current_state, _last_wrench);
+  _measurement_pub->pub_measurement();
+}
+
+void Robot::publish_view() {
+  _measurement_pub->update_view(_last_view, _current_state.t);
+  _measurement_pub->pub_view();
 }
 
 /* Kinematics */

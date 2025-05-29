@@ -24,6 +24,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   cv_bridge
   image_transport
+  visualization_msgs
 )
 
 # messages
@@ -57,6 +58,7 @@ target_sources(
   src/utils/config.cpp
   src/utils/data_struct.cpp
   src/utils/math.cpp
+  src/utils/mesh_publisher.cpp
 )
 target_include_directories(
   simulator
@@ -87,6 +89,7 @@ catkin_install_python(
   PROGRAMS
     scripts/trajectory_generator
     scripts/image_segmentor
+    scripts/mesh_visualizer
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

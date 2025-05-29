@@ -14,14 +14,17 @@
     <param name="agent_num" value="4"/>
     <param name="model_dir" value="$(arg model)"/>
   </node>
-  <!-- <node name="mesh_estimator" pkg="($arg package)" type="mesh_estimator" output="$(arg output)">
+  <!-- <node name="mesh_estimator" pkg="$(arg package)" type="mesh_estimator" output="$(arg output)">
     <param name="param" value="$(arg param)"/>
     <param name="agent_num" value="4"/>
   </node>
-  <node name="param_estimator" pkg="($arg package)" type="param_estimator" output="$(arg output)">
+  <node name="param_estimator" pkg="$(arg package)" type="param_estimator" output="$(arg output)">
     <param name="param" value="$(arg param)"/>
     <param name="agent_num" value="4"/>
   </node> -->
+  <node name="mesh_visualizer" pkg="$(arg package)" type="mesh_visualizer" output="$(arg output)">
+    <param name="frame_id" value="world"/>
+  </node>
   <group ns="robot_0">
     <node name="trajectory_generator" pkg="$(arg package)" type="trajectory_generator" output="screen">
       <param name="agent_id" value="0"/>

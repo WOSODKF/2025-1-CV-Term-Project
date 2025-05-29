@@ -23,6 +23,9 @@ int ROBOT_CAM_WIDTH, ROBOT_CAM_HEIGHT;
 mjvCamera _robot_camera;
 mjrRect _robot_viewport;
 
+// segmentor init
+bool segmentor_inited = false;
+
 // mesh init
 bool init_mesh_sent = false;
 
@@ -157,7 +160,7 @@ Simulator::Simulator(std::shared_ptr<config_t> config): _config(config) {
     throw std::out_of_range("Agent not found");
   }
 
-  // Initialize ros io & control value
+  // Initialize members
   mj_forward(_model, _data);  // to access body xpos
   ros::NodeHandle node("~");
   _robot = std::vector<std::shared_ptr<Robot>>(_agent_num);
@@ -171,8 +174,19 @@ Simulator::Simulator(std::shared_ptr<config_t> config): _config(config) {
   ROBOT_CAM_HEIGHT = _config->camera.height;
   _robot_viewport = {0, 0, ROBOT_CAM_WIDTH, ROBOT_CAM_HEIGHT};
 
+  auto first_body_id = mj_name2id(_model, mjOBJ_BODY, "cloth_0");
+  if (first_body_id == -1) {
+    ROS_ERROR("Cloth body not found");
+  }
+  _mesh.init_mesh(first_body_id, _config->mesh.rows, _config->mesh.cols);
+  _mesh_pub = make_mesh_publisher(node, "GT", _mesh);
+
+  _segmentor_init_sub = node.subscribe<std_msgs::Bool>(
+    "/segmentor/initialized", 2,
+    [&](const std_msgs::Bool::ConstPtr& msg) { segmentor_inited = msg->data; });
+
+  // callback registration
   register_callback();
-  // _mesh_pub = make_mesh_publisher(node, "GT");
 }
 
 Simulator::~Simulator() {
@@ -183,63 +197,79 @@ Simulator::~Simulator() {
 }
 
 void Simulator::run() {
+  mjtNum last_measure_time = 0.0;
+  mjtNum last_view_render_time = 0.0;
+
   while (!glfwWindowShouldClose(_window) && ros::ok()) {
     auto comp_start = std::chrono::steady_clock::now();
 
     mjtNum simstart = _data->time;
-    while (_data->time - simstart < 1.0 / _config->sim.FPS && _run) {
-      // simulation step (robot state update & control done in callback)
+    while (_data->time - simstart < 1.0 / _config->sim.sim_render_rate &&
+           _run) {
+      // simulation step
       mj_step(_model, _data);
 
       // publish states
       for (int id = 0; id < _agent_num; id++) {
-        _robot[id]->publish_state();
+        _robot[id]
+          ->publish_state();  // (robot state update & control done in callback)
       }
     }
 
     auto dyna_end = std::chrono::steady_clock::now();
 
-    // update measurement & publish (after integration -> 60Hz)
+    // update view & publish
+    bool render_view = _config->view.render_view && _run &&
+      _data->time > _config->measure.measure_start_time && segmentor_inited;
+
     if (
-      _config->sim.measure_on && _run &&
-      _data->time > _config->sim.measure_start_time) {
+      render_view &&
+      _data->time - last_view_render_time > 1 / _config->view.view_pub_rate) {
       for (int id = 0; id < _agent_num; id++) {
-        // render robot view & publish
-        bool data_gen_mode = _config->sim.data_gen_mode &&
-          (std::ceil(5 * _data->time) != std::ceil(5 * simstart));
-        _robot[id]->update_wrench(_model, _data);
         _robot[id]->update_view(
           _model, _data, _option, _robot_camera, _scene, _context,
-          _robot_viewport, data_gen_mode);
-
-        _robot[id]->publish_measurement();
+          _robot_viewport, _config->sim.data_gen_mode);
+        _robot[id]->publish_view();
       }
+      last_view_render_time = _data->time;
     }
-
-    // get mesh data and publish
-//     bool init_mesh =
-//       !init_mesh_sent && _data->time > _config->mesh.init_mesh_time;
-// 
-//     if (init_mesh || _config->mesh.GT_mesh) {
-//       /* TODO: get mesh data and update _mesh_pub */
-//       // _mesh_pub->update();
-//       _mesh_pub->pub();
-//       init_mesh_sent = true;
-//     }
 
     auto robot_render_end = std::chrono::steady_clock::now();
 
-    // reset behavior (0415: organize codes and variables / update reset
-    // behavior)
-    if (_reset && _reset_pub_cnt == 0) {
+    // update measurement & publish
+    bool measure_on = _config->measure.measure_on && _run &&
+      _data->time > _config->measure.measure_start_time && segmentor_inited;
+
+    if (
+      measure_on &&
+      _data->time - last_measure_time > 1 / _config->measure.measure_pub_rate) {
       for (int id = 0; id < _agent_num; id++) {
-        // TODO: implement reset behavior
+        _robot[id]->update_wrench(_model, _data);
+        _robot[id]->publish_measurement();
       }
+      last_measure_time = _data->time;
+    }
+
+    // get mesh data & publish
+    bool init_mesh = !init_mesh_sent &&
+      _data->time > _config->mesh.mesh_init_time && segmentor_inited;
+
+    if (init_mesh || (_config->mesh.GT_mesh && segmentor_inited)) {
+      _mesh.update_mesh(_model, _data);
+      _mesh_pub->update(_mesh, init_mesh);
+      _mesh_pub->pub();
+      init_mesh_sent = true;
+    }
+
+    // reset behavior
+    if (_reset && _reset_pub_cnt == 0) {
       _reset_pub_cnt++;
       _pause_pub_cnt++;
 
       _reset = false;
     }
+
+    auto robot_measure_end = std::chrono::steady_clock::now();
 
     // simulation scene rendering
     mjrRect viewport = {0, 0, 0, 0};
@@ -266,6 +296,9 @@ void Simulator::run() {
     auto robot_render_duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(
         robot_render_end - dyna_end);
+    auto measure_duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+        robot_measure_end - robot_render_end);
     auto scene_render_duration =
       std::chrono::duration_cast<std::chrono::milliseconds>(
         scene_render_end - robot_render_end);
@@ -277,6 +310,8 @@ void Simulator::run() {
                 << "dynamics: " << dyna_duration.count() << "ms" << std::endl
                 << "robot rendering: " << robot_render_duration.count() << "ms"
                 << std::endl
+                << "measurement acquisition:" << measure_duration.count()
+                << "ms" << std::endl
                 << "scene rendering: " << scene_render_duration.count() << "ms"
                 << std::endl
                 << "net: " << net_duration.count() << "ms" << std::endl

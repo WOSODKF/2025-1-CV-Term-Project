@@ -124,8 +124,15 @@ struct est_error_t{
 };
 
 struct mesh_data_t{
+  int first_body_id;
+
   double t;
-  /*TODO*/
+  int rows;
+  int cols;
+  std::vector<Vector3d> points; // row-major
+
+  void init_mesh(int first_body_id, int rows, int cols);
+  void update_mesh(const mjModel* m, const mjData* d);
 };
 
 struct est_mesh_param_t{
@@ -133,16 +140,6 @@ struct est_mesh_param_t{
 
   /*TODO*/
 };
-
-//
-// mujoco_control_t inverse_kinematics(
-//   const setpoint_t& setpoint, const setpoint_t& zero_config,
-//   const robot_FK_param_t& param);
-// setpoint_t forward_kinematics(
-//   const mujoco_control_t& theta, const setpoint_t& zero_config,
-//   const robot_FK_param_t& param);
-// void set_control(mjData* d, const mujoco_control_t& control, int
-// first_act_ID);
 
 geometry_msgs::Point eigen_to_point_msg(Vector3d p);
 geometry_msgs::Quaternion eigen_to_quat_msg(Quaterniond q);

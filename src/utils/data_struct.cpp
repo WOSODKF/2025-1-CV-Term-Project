@@ -143,6 +143,33 @@ void mujoco_robot_wrench_t::update_wrench(
   ext_torque = torque;
 }
 
+void mesh_data_t::init_mesh(int first_body_id, int rows, int cols) {
+  this->first_body_id = first_body_id;
+  this->rows = rows;
+  this->cols = cols;
+
+  points = std::vector<Vector3d>(rows * cols);
+}
+
+void mesh_data_t::update_mesh(const mjModel* m, const mjData* d) {
+  t = d->time;
+
+  const int row_stride = 16 / rows;
+  const int col_stride = 16 / cols;
+
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      int id_shift = col_stride * j + row_stride * col_stride * cols * i;
+      int body_id = first_body_id + id_shift;
+      points[cols * i + j] << d->xpos[3 * body_id],
+        d->xpos[3 * body_id + 1], d->xpos[3 * body_id + 2];
+      // std::cout << "mesh point " << points[cols * i + j].transpose()
+      //           << std::endl;
+    }
+  }
+  // std::cout << "----------------------------------------------" << std::endl;
+}
+
 // mujoco_control_t inverse_kinematics(
 //   const setpoint_t& setpoint, const setpoint_t& zero_config,
 //   const robot_FK_param_t& param) {

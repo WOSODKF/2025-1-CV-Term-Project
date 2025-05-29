@@ -1,14 +1,62 @@
-#!/bin/python3
-import os
-import sys
-
-script_dir = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(script_dir)
-
-import numpy as np
 import rospy
-from cv_project.msg import setpoint, robotState, robotMeasurement
-from utils.math_utils import *
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
-import cv2
+import numpy as np
+from cv_project.msg import mesh
+from geometry_msgs.msg import Point
+from visualization_msgs.msg import Marker
+
+class MeshVisualizer:
+    def __init__(self):
+        rospy.init_node("mesh_visualizer_rviz")
+        self.sub = rospy.Subscriber("/simulator/mesh_GT", mesh, self.callback)
+        self.pub = rospy.Publisher("/cloth_mesh_marker", Marker, queue_size=1)
+        self.frame_id = rospy.get_param("~frame_id", "world")
+
+    def callback(self, msg:mesh):
+        rows, cols = msg.rows, msg.cols
+        if len(msg.positions) != rows * cols:
+            rospy.logwarn("Mesh size mismatch")
+            return
+
+        # Reshape to 2D array for easier access
+        positions = np.array([[p.x, p.y, p.z] for p in msg.positions])
+        positions = positions.reshape((rows, cols, 3))
+
+        marker = Marker()
+        marker.header = msg.header
+        marker.header.frame_id = self.frame_id
+        marker.ns = "cloth_mesh"
+        marker.id = 0
+        marker.type = Marker.LINE_LIST
+        marker.action = Marker.ADD
+        marker.scale.x = 0.005  # line width
+
+        marker.color.r = 0.2
+        marker.color.g = 0.8
+        marker.color.b = 1.0
+        marker.color.a = 1.0
+
+        marker.points = []
+
+        # Horizontal lines
+        for i in range(rows):
+            for j in range(cols - 1):
+                p1 = Point(*positions[i, j])
+                p2 = Point(*positions[i, j + 1])
+                marker.points.append(p1)
+                marker.points.append(p2)
+
+        # Vertical lines
+        for i in range(rows - 1):
+            for j in range(cols):
+                p1 = Point(*positions[i, j])
+                p2 = Point(*positions[i + 1, j])
+                marker.points.append(p1)
+                marker.points.append(p2)
+
+        self.pub.publish(marker)
+
+    def run(self):
+        rospy.spin()
+
+if __name__ == "__main__":
+    MeshVisualizer().run()

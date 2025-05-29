@@ -9,6 +9,7 @@ import numpy as np
 import rospy
 from cv_project.msg import clothMask
 from utils.math_utils import *
+from std_msgs.msg import *
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from ultralytics import YOLO
@@ -24,6 +25,8 @@ class ImageSegmentor:
         agent_num = rospy.get_param("~agent_num")
         model_dir = rospy.get_param("~model_dir")
         self.init_segmentor_by_params(agent_num, model_dir)
+        init_pub = rospy.Publisher("~initialized", Bool, queue_size=2, latch=True)
+        init_pub.publish(data=True)
         
     def init_segmentor_by_params(self, agent_num, model_dir):
         self.model:YOLO = YOLO(model_dir)
@@ -39,7 +42,7 @@ class ImageSegmentor:
             self.mask_pub.append(MaskPublisher(i))
         
         # for test
-        self.image_pub = rospy.Publisher("~seg_result", Image, queue_size=3)
+        self.seg_vis_pub = rospy.Publisher("~seg_vis", Image, queue_size=3)
         
     def mask_to_msg(self, binary_mask: np.ndarray, header=None, encoding="mono8") -> clothMask:
         msg = clothMask()
@@ -76,34 +79,35 @@ class ImageSegmentor:
         self.mask_pub[agent_ID].pub()
     
         # segmentation test
-        self.image_pub.publish(self.bridge.cv2_to_imgmsg(data, encoding="mono8"))
+        if agent_ID == 3:
+            self.seg_vis_pub.publish(self.bridge.cv2_to_imgmsg(255 * data, encoding="mono8"))
         
 class ViewSubscriber:
     def __init__(self, agent_ID, parent_segmentor:ImageSegmentor=None):
-        self.latest_msg = Image()
+        self.last_msg = Image()
         self.parent = parent_segmentor  # assign member
         self.agent_ID = agent_ID
         self.sub_topic_name = "simulator/view_" + str(agent_ID)
         self.subscriber = rospy.Subscriber(self.sub_topic_name, Image, self.callback)
     
     def callback(self, msg):
-        # self.latest_msg = msg
+        # self.last_msg = msg
         if self.parent is not None:
             self.parent.segment_image(msg, self.agent_ID)
     
 class MaskPublisher:
     def __init__(self, agent_ID):
-        self.latest_msg = clothMask()
+        self.last_msg = clothMask()
         self.agent_ID = agent_ID
         self.topic_name = "~cloth_mask_" + str(agent_ID)
         self.publisher = rospy.Publisher(self.topic_name, clothMask, queue_size=5)
         pass
     
     def update_msg(self, msg:clothMask):
-        self.latest_msg = msg
+        self.last_msg = msg
     
     def pub(self):
-        self.publisher.publish(self.latest_msg)
+        self.publisher.publish(self.last_msg)
     
 
 if __name__ == '__main__':

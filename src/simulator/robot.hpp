@@ -40,8 +40,10 @@ public:
     const mjModel* m, mjData* d, mjvOption& opt, mjvCamera& cam, mjvScene& scn,
     mjrContext& con, const mjrRect& viewport, bool data_gen_mode);
   void update_wrench(const mjModel* m, mjData* d);
+  
   void publish_state();
   void publish_measurement();
+  void publish_view();
 
   const mujoco_control_t get_control() const;
   const mujoco_control_id_t get_id() const;

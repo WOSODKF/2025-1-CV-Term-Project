@@ -15,41 +15,31 @@ MeasurementPublisher::MeasurementPublisher(
     node.advertise<cv_project::robotMeasurement>(topic_name, 32);
 }
 
-void MeasurementPublisher::pub() {
-  // _wrench_pub.publish(_last_wrench_msg);
-  _view_pub.publish(_last_view_msg);  // for rqt_image_view (not for processing)
-  _measurement_pub.publish(_last_msg);
+void MeasurementPublisher::pub_view() {
+  _view_pub.publish(_last_view_msg);
 }
 
-void MeasurementPublisher::update(
-  const robot_state_t& state, const mujoco_robot_wrench_t& robot_wrench,
-  const cv::Mat& bgr_img) {
-  update_state(state);
-  update_wrench(robot_wrench);
-  update_view(bgr_img, state.t);
+void MeasurementPublisher::pub_measurement(){
+  _measurement_pub.publish(_last_measurement_msg);
 }
 
-void MeasurementPublisher::update_state(const robot_state_t& state) {
+void MeasurementPublisher::update_measurement(const robot_state_t& state, const mujoco_robot_wrench_t& robot_wrench) {
   auto time = ros::Time(state.t);
 
-  _last_msg.header.stamp = time;
-  _last_msg.header.frame_id = "robot_" + std::to_string(_agent_ID);
+  _last_measurement_msg.header.stamp = time;
+  _last_measurement_msg.header.frame_id = "robot_" + std::to_string(_agent_ID);
 
-  _last_msg.end_pos = eigen_to_point_msg(state.end_pos);
+  _last_measurement_msg.end_pos = eigen_to_point_msg(state.end_pos);
   auto end_quat = Quaterniond(state.end_rot);
   end_quat.normalize();
-  _last_msg.end_quat = eigen_to_quat_msg(end_quat);
+  _last_measurement_msg.end_quat = eigen_to_quat_msg(end_quat);
 
-  _last_msg.cam_pos = eigen_to_point_msg(state.cam_pos);
+  _last_measurement_msg.cam_pos = eigen_to_point_msg(state.cam_pos);
   auto cam_quat = Quaterniond(state.cam_rot);
   cam_quat.normalize();
-  _last_msg.cam_quat = eigen_to_quat_msg(cam_quat);
-}
+  _last_measurement_msg.cam_quat = eigen_to_quat_msg(cam_quat);
 
-void MeasurementPublisher::update_wrench(
-  const mujoco_robot_wrench_t& robot_wrench) {
-  _last_msg.wrench = eigen_to_wrench_msg(robot_wrench);
-  // _last_wrench_msg = _last_msg.wrench;
+  _last_measurement_msg.wrench = eigen_to_wrench_msg(robot_wrench);
 }
 
 void MeasurementPublisher::update_view(const cv::Mat& bgr_img, double time) {

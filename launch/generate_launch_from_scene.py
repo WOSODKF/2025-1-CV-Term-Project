@@ -56,7 +56,7 @@ ET.SubElement(seg_node, "param", name="model_dir", value="$(arg model)")
 # mesh estimator node
 mesh_node = ET.SubElement(launch, "node",{
     "name": "mesh_estimator",
-    "pkg": "($arg package)",
+    "pkg": "$(arg package)",
     "type": "mesh_estimator",
     "output": "$(arg output)"
 })
@@ -66,12 +66,21 @@ ET.SubElement(mesh_node, "param", name="agent_num", value=str(agent_num))
 # param estimator node
 param_node = ET.SubElement(launch, "node",{
     "name": "param_estimator",
-    "pkg": "($arg package)",
+    "pkg": "$(arg package)",
     "type": "param_estimator",
     "output": "$(arg output)"
 })
 ET.SubElement(param_node, "param", name="param", value="$(arg param)")
 ET.SubElement(param_node, "param", name="agent_num", value=str(agent_num))
+
+# mesh visualizer node
+vis_node = ET.SubElement(launch, "node", {
+    "name": "mesh_visualizer",
+    "pkg": "$(arg package)",
+    "type": "mesh_visualizer",
+    "output": "$(arg output)"
+})
+ET.SubElement(vis_node, "param", name="frame_id", value="world")
 
 # Per-agent groups
 for i in agent_ids:

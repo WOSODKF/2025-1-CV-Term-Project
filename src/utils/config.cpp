@@ -16,18 +16,30 @@ inline value_t get_or_die(ros::NodeHandle& node, std::string name) {
 sim_param_t get_sim_param(YAML::Node node) {
   return sim_param_t {
     .g = node["g"].as<double>(),
-    .FPS = node["FPS"].as<double>(),
-    .measure_on = node["measure_on"].as<bool>(),
-    .measure_start_time = node["measure_start_time"].as<double>(),
-    .render_view = node["render_view"].as<bool>(),
+    .sim_render_rate = node["sim_render_rate"].as<double>(),
     .duration_check = node["duration_check"].as<bool>(),
     .data_gen_mode = node["data_gen_mode"].as<bool>()};
+}
+
+view_param_t get_view_param(YAML::Node node) {
+  return view_param_t {
+    .render_view = node["render_view"].as<bool>(),
+    .view_pub_rate = node["view_pub_rate"].as<double>()};
+}
+
+measure_param_t get_measure_param(YAML::Node node) {
+  return measure_param_t {
+    .measure_on = node["measure_on"].as<bool>(),
+    .measure_pub_rate = node["measure_pub_rate"].as<double>(),
+    .measure_start_time = node["measure_start_time"].as<double>()};
 }
 
 mesh_sim_param_t get_mesh_param(YAML::Node node) {
   return mesh_sim_param_t {
     .GT_mesh = node["GT_mesh"].as<bool>(),
-    .mesh_init_time = node["mesh_init_time"].as<double>()};
+    .mesh_init_time = node["mesh_init_time"].as<double>(),
+    .rows = node["rows"].as<int>(),
+    .cols = node["cols"].as<int>()};
 }
 
 robot_param_t get_robot_param(YAML::Node node) {
@@ -64,6 +76,8 @@ std::shared_ptr<config_t> get_config() {
   return std::make_shared<config_t>(config_t {
     .xml_file = get_or_die<std::string>(node, "xml_file"),
     .sim = get_sim_param(ynode["sim"]),
+    .view = get_view_param(ynode["view"]),
+    .measure = get_measure_param(ynode["measure"]),
     .mesh = get_mesh_param(ynode["mesh"]),
     .robot = get_robot_param(ynode["robot"]),
     .IK = get_IK_param(ynode["IK"]),
