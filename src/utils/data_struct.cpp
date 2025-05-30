@@ -30,7 +30,7 @@ void robot_FK_param_t::set_FK_param(
   base_rot = R_ss;
 }
 
-void robot_state_t::update_state(
+void robot_state_t::update(
   const mjData* d, int first_qpos_ID, int end_site_ID, int cam_ID) {
   t = d->time;
 
@@ -58,7 +58,7 @@ void robot_state_t::update_state(
     d->cam_xmat[9 * cam_ID + 8];
 }
 
-void mujoco_control_t::reset_control() {
+void mujoco_control_t::reset() {
   joint_pos_0 = 0.0;
   joint_pos_1 = 0.0;
   joint_pos_2 = 0.0;
@@ -130,20 +130,20 @@ void mujoco_control_t::clip_control(double u_bound, double l_bound) {
   joint_pos_5 = clip(joint_pos_5, u_bound, l_bound);
 }
 
-void mujoco_robot_wrench_t::init_wrench() {
+void mujoco_robot_wrench_t::init() {
   t = 0.0;
   ext_force.setZero();
   ext_torque.setZero();
 }
 
-void mujoco_robot_wrench_t::update_wrench(
+void mujoco_robot_wrench_t::update(
   const Vector3d& force, const Vector3d& torque, double time) {
   t = time;
   ext_force = force;
   ext_torque = torque;
 }
 
-void mesh_data_t::init_mesh(int first_body_id, int rows, int cols) {
+void mesh_data_t::init(int first_body_id, int rows, int cols) {
   this->first_body_id = first_body_id;
   this->rows = rows;
   this->cols = cols;
@@ -151,19 +151,20 @@ void mesh_data_t::init_mesh(int first_body_id, int rows, int cols) {
   points = std::vector<Vector3d>(rows * cols);
 }
 
-void mesh_data_t::update_mesh(const mjModel* m, const mjData* d) {
+void mesh_data_t::update(const mjModel* m, const mjData* d) {
   t = d->time;
 
   const int full_size = 17;
-  const int row_stride = (full_size + rows - 1) / rows; // ceiling operation for integer
+  const int row_stride =
+    (full_size + rows - 1) / rows;  // ceiling operation for integer
   const int col_stride = (full_size + cols - 1) / cols;
 
   for (int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
       int id_shift = col_stride * j + row_stride * full_size * i;
       int body_id = first_body_id + id_shift;
-      points[cols * i + j] << d->xpos[3 * body_id],
-        d->xpos[3 * body_id + 1], d->xpos[3 * body_id + 2];
+      points[cols * i + j] << d->xpos[3 * body_id], d->xpos[3 * body_id + 1],
+        d->xpos[3 * body_id + 2];
       // std::cout << "mesh point " << points[cols * i + j].transpose()
       //           << std::endl;
     }
@@ -171,27 +172,43 @@ void mesh_data_t::update_mesh(const mjModel* m, const mjData* d) {
   // std::cout << "----------------------------------------------" << std::endl;
 }
 
-// mujoco_control_t inverse_kinematics(
-//   const setpoint_t& setpoint, const setpoint_t& zero_config,
-//   const robot_FK_param_t& param) {
-//   // TODO: implement inverse kinematics algorithm
-// }
-//
-// setpoint_t forward_kinematics(const mujoco_control_t& theta, const
-// setpoint_t& zero_config, const robot_FK_param_t& param){
-//
-// }
-//
-//
-// void set_control(mjData* d, const mujoco_control_t& control, int
-// first_act_ID) {
-//   d->ctrl[first_act_ID] = control.joint_pos_0;
-//   d->ctrl[first_act_ID + 1] = control.joint_pos_1;
-//   d->ctrl[first_act_ID + 2] = control.joint_pos_2;
-//   d->ctrl[first_act_ID + 3] = control.joint_pos_3;
-//   d->ctrl[first_act_ID + 4] = control.joint_pos_4;
-//   d->ctrl[first_act_ID + 5] = control.joint_pos_5;
-// }
+void robot_measurement_t::update(const cv_project::robotMeasurement& msg){
+  t = msg.header.stamp.toSec();
+
+  end_pos = point_msg_to_eigen(msg.end_pos);
+  auto end_quat = quat_msg_to_eigen(msg.end_quat);
+  end_quat.normalize();
+  end_rot = end_quat.toRotationMatrix();
+
+  cam_pos = point_msg_to_eigen(msg.cam_pos);
+  auto cam_quat = quat_msg_to_eigen(msg.cam_quat);
+  cam_quat.normalize();
+  cam_rot = cam_quat.toRotationMatrix();
+
+  ext_force = vector3_msg_to_eigen(msg.wrench.force);
+  ext_torque = vector3_msg_to_eigen(msg.wrench.torque);
+}
+
+void mask_data_t::init(std::shared_ptr<config_t> config) {
+  t = 0.0;
+
+  height = config->camera.height;
+  width = config->camera.width;
+
+  data.resize(height, width);
+}
+
+void mask_data_t::update(const cv_project::clothMask& msg) {
+  t = msg.header.stamp.toSec();
+
+  for (int i = 0; i < height; i++) {
+    for (int j = 0; j < width; j++) {
+      data(i, j) = msg.data[i * width + j];
+    }
+  }
+
+  encoding = msg.encoding;
+}
 
 geometry_msgs::Point eigen_to_point_msg(Vector3d p) {
   geometry_msgs::Point result;

@@ -8,8 +8,8 @@
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "mesh_estimator_node");
+  ros::NodeHandle node("~");
 
-  auto node = ros::NodeHandle("~");
   auto config = get_config();
   auto mesh_estimator = make_mesh_estimator(config, node);
 

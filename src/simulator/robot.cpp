@@ -4,7 +4,7 @@ Robot::Robot(
   const mjModel* m, const mjData* d, std::shared_ptr<config_t> config,
   ros::NodeHandle& node, int agent_ID)
     : _agent_ID(agent_ID) {
-  _last_control.reset_control();
+  _last_control.reset();
   _mj_ID.set_id(m, agent_ID);
   _render_view = config->view.render_view;
 
@@ -31,12 +31,12 @@ Robot::Robot(
   _measurement_pub = make_measurement_publisher(node, agent_ID, _mj_ID._cam_ID);
   _state_pub = make_state_publisher(node, agent_ID);
 
-  _last_wrench.init_wrench();
+  _last_wrench.init();
 }
 
 void Robot::compute_control(const mjModel* m, const mjData* d) {
   // update state
-  _current_state.update_state(
+  _current_state.update(
     d, _mj_ID._first_qpos_ID, _mj_ID._grasp_site_ID, _mj_ID._cam_ID);
 
   // compute control
@@ -66,7 +66,7 @@ void Robot::update_wrench(const mjModel* m, mjData* d) {
   torque << d->efc_force[6 * equality_ID + 3],
     d->efc_force[6 * equality_ID + 4], d->efc_force[6 * equality_ID + 5];
 
-  _last_wrench.update_wrench(force, torque, d->time);
+  _last_wrench.update(force, torque, d->time);
 }
 
 void Robot::update_view(

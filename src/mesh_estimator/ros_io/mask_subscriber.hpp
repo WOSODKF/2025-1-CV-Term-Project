@@ -9,7 +9,8 @@
 
 class MaskSubscriber {
 public:
-  MaskSubscriber(ros::NodeHandle& node, int agent_ID);
+  MaskSubscriber(
+    ros::NodeHandle& node, std::shared_ptr<config_t> config, int agent_ID);
   mask_data_t get_data();
 
 private:
@@ -22,4 +23,5 @@ private:
   void callback(cv_project::clothMask msg);
 };
 
-std::shared_ptr<MaskSubscriber> make_mask_subscriber(ros::NodeHandle& node, int agent_ID);
+std::shared_ptr<MaskSubscriber> make_mask_subscriber(
+  ros::NodeHandle& node, std::shared_ptr<config_t> config, int agent_ID);

@@ -22,5 +22,5 @@ private:
   void callback(cv_project::robotMeasurement msg);
 };
 
-std::shared_ptr<MeasurementSubscriber> make_measurment_subscriber(
+std::shared_ptr<MeasurementSubscriber> make_measurement_subscriber(
   ros::NodeHandle& node, int agent_ID);

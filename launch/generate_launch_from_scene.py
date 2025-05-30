@@ -60,6 +60,7 @@ mesh_node = ET.SubElement(launch, "node",{
     "type": "mesh_estimator",
     "output": "$(arg output)"
 })
+ET.SubElement(mesh_node, "param", name="xml_file", value="$(arg xml_file)")
 ET.SubElement(mesh_node, "param", name="param", value="$(arg param)")
 ET.SubElement(mesh_node, "param", name="agent_num", value=str(agent_num))
 

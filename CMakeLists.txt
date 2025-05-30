@@ -84,6 +84,45 @@ target_compile_features(
   cxx_std_17
 )
 
+# executable for mesh estimator
+add_executable(mesh_estimator "")
+target_sources(
+  mesh_estimator
+  PRIVATE
+  src/mesh_estimator/main.cpp
+  src/mesh_estimator/mesh_estimator.cpp
+  src/mesh_estimator/ros_io/error_publisher.cpp
+  src/mesh_estimator/ros_io/mask_subscriber.cpp
+  src/mesh_estimator/ros_io/measurement_subscriber.cpp
+  src/mesh_estimator/ros_io/param_subscriber.cpp
+  src/utils/config.cpp
+  src/utils/data_struct.cpp
+  src/utils/math.cpp
+  src/utils/mesh_publisher.cpp
+)
+target_include_directories(
+  mesh_estimator
+  PRIVATE
+  ${catkin_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
+  src
+)
+target_link_libraries(
+  mesh_estimator
+  PRIVATE
+  ${catkin_LIBRARIES}
+  yaml-cpp
+  mujoco
+  Eigen3::Eigen
+  ${OpenCV_LIBS}
+)
+target_compile_features(
+  mesh_estimator
+  PRIVATE
+  cxx_std_17
+)
+
 # Install Python scripts and make them executable
 catkin_install_python(
   PROGRAMS

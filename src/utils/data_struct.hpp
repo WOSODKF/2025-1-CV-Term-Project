@@ -1,5 +1,10 @@
 #pragma once
 
+#include "utils/config.hpp"
+#include "utils/math.hpp"
+#include <cv_project/clothMask.h>
+#include <cv_project/robotMeasurement.h>
+
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <geometry_msgs/Point.h>
@@ -9,8 +14,6 @@
 
 // #include "mujoco.h"  // mujoco-3.2.0
 #include "mujoco/mujoco.h"  //mujoco-3.3.1
-#include "utils/config.hpp"
-#include "utils/math.hpp"
 
 using namespace Eigen;
 
@@ -45,20 +48,7 @@ struct robot_state_t {
   Vector3d cam_pos;
   Matrix3d cam_rot;
 
-  void update_state(const mjData* d, int first_qpos_ID, int end_site_ID, int cam_ID);
-};
-
-struct robot_measurement_t{
-  double t;
-
-  Vector3d end_pos;
-  Matrix3d end_rot;
-
-  Vector3d cam_pos;
-  Matrix3d cam_rot;
-
-  Vector3d ext_force;
-  Vector3d ext_torque;
+  void update(const mjData* d, int first_qpos_ID, int end_site_ID, int cam_ID);
 };
 
 struct setpoint_t {
@@ -80,8 +70,8 @@ struct mujoco_robot_wrench_t {
   Vector3d ext_force;
   Vector3d ext_torque;
 
-  void init_wrench();
-  void update_wrench(const Vector3d& force, const Vector3d& torque, double time);
+  void init();
+  void update(const Vector3d& force, const Vector3d& torque, double time);
 };
 
 struct mujoco_control_t {
@@ -92,7 +82,7 @@ struct mujoco_control_t {
   double joint_pos_4;
   double joint_pos_5;
 
-  void reset_control();
+  void reset();
   mujoco_control_t operator+(const VectorXd& other) const;
   void clip_control(double u_bound, double l_bound);
 };
@@ -111,11 +101,7 @@ struct mujoco_control_id_t {
   void set_id(const mjModel* m, int agent_ID);
 };
 
-struct mask_data_t{
-  double t;
 
-  /* TODO: fill the struct */
-};
 
 struct est_error_t{
   double t;
@@ -131,14 +117,42 @@ struct mesh_data_t{
   int cols;
   std::vector<Vector3d> points; // row-major
 
-  void init_mesh(int first_body_id, int rows, int cols);
-  void update_mesh(const mjModel* m, const mjData* d);
+  void init(int first_body_id, int rows, int cols);
+  void update(const mjModel* m, const mjData* d);
 };
 
 struct est_mesh_param_t{
   double t;
 
   /*TODO*/
+};
+
+/* For subscribers */
+struct robot_measurement_t {  // only used for subscription
+  double t;
+
+  Vector3d end_pos;
+  Matrix3d end_rot;
+
+  Vector3d cam_pos;
+  Matrix3d cam_rot;
+
+  Vector3d ext_force;
+  Vector3d ext_torque;
+
+  void update(const cv_project::robotMeasurement& msg);
+};
+
+struct mask_data_t{
+  double t;
+
+  int height;
+  int width;
+  MatrixXi data;
+  std::string encoding;
+
+  void init(std::shared_ptr<config_t> config);
+  void update(const cv_project::clothMask& msg);
 };
 
 geometry_msgs::Point eigen_to_point_msg(Vector3d p);

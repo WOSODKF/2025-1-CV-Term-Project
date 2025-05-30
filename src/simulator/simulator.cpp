@@ -178,7 +178,7 @@ Simulator::Simulator(std::shared_ptr<config_t> config): _config(config) {
   if (first_body_id == -1) {
     ROS_ERROR("Cloth body not found");
   }
-  _mesh.init_mesh(first_body_id, _config->mesh.rows, _config->mesh.cols);
+  _mesh.init(first_body_id, _config->mesh.rows, _config->mesh.cols);
   _mesh_pub = make_mesh_publisher(node, "GT", _mesh);
 
   _segmentor_init_sub = node.subscribe<std_msgs::Bool>(
@@ -255,7 +255,7 @@ void Simulator::run() {
       _data->time > _config->mesh.mesh_init_time && segmentor_inited;
 
     if (init_mesh || (_config->mesh.GT_mesh && segmentor_inited)) {
-      _mesh.update_mesh(_model, _data);
+      _mesh.update(_model, _data);
       _mesh_pub->update(_mesh, init_mesh);
       _mesh_pub->pub();
       init_mesh_sent = true;

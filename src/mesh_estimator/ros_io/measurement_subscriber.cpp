@@ -2,7 +2,7 @@
 
 MeasurementSubscriber::MeasurementSubscriber(ros::NodeHandle& node, int agent_ID)
     : _agent_ID(agent_ID) {
-  std::string topic_name = "measurement_" + std::to_string(agent_ID);
+  std::string topic_name = "/simulator/measurement_" + std::to_string(agent_ID);
   _sub = node.subscribe(topic_name, 8, &MeasurementSubscriber::callback, this);
 }
 
@@ -11,7 +11,7 @@ robot_measurement_t MeasurementSubscriber::get_data() {
 }
 
 void MeasurementSubscriber::callback(cv_project::robotMeasurement msg) {
-  /*TODO: _last_mask_data <- msg*/
+  _last_measurement_data.update(msg);
 }
 
 std::shared_ptr<MeasurementSubscriber> make_measurement_subscriber(
