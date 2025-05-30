@@ -154,12 +154,13 @@ void mesh_data_t::init_mesh(int first_body_id, int rows, int cols) {
 void mesh_data_t::update_mesh(const mjModel* m, const mjData* d) {
   t = d->time;
 
-  const int row_stride = 16 / rows;
-  const int col_stride = 16 / cols;
+  const int full_size = 17;
+  const int row_stride = (full_size + rows - 1) / rows; // ceiling operation for integer
+  const int col_stride = (full_size + cols - 1) / cols;
 
   for (int i = 0; i < rows; i++) {
     for (int j = 0; j < cols; j++) {
-      int id_shift = col_stride * j + row_stride * col_stride * cols * i;
+      int id_shift = col_stride * j + row_stride * full_size * i;
       int body_id = first_body_id + id_shift;
       points[cols * i + j] << d->xpos[3 * body_id],
         d->xpos[3 * body_id + 1], d->xpos[3 * body_id + 2];

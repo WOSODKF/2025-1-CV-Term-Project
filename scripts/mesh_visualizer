@@ -1,17 +1,87 @@
+#!/bin/python3
+import os
+import sys
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(script_dir)
+
 import rospy
 import numpy as np
-from cv_project.msg import mesh
+import yaml
+import cv2
+from cv_project.msg import mesh, robotMeasurement
 from geometry_msgs.msg import Point
 from visualization_msgs.msg import Marker
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+from utils.math_utils import *
 
+def get_camera_p(cam_K, measurement_msg:robotMeasurement):
+    cam_pos = np.array([measurement_msg.cam_pos.x, measurement_msg.cam_pos.y, measurement_msg.cam_pos.z])
+    cam_quat = np.array([measurement_msg.cam_quat.w, measurement_msg.cam_quat.x, measurement_msg.cam_quat.y, measurement_msg.cam_quat.z])
+    cam_rot = quat_to_mat(cam_quat)
+    
+    T_cs = np.zeros((4,4))
+    T_cs[:3,:3] = cam_rot.transpose()
+    T_cs[:3,3] = -cam_rot.transpose() @ cam_pos
+    T_cs[3,3] = 1
+    
+    I_0 = np.zeros((3,4))
+    I_0[:3,:3] = np.identity(3)
+    
+    return cam_K @ I_0 @ T_cs
+
+class CameraParameters:
+    def __init__(self, config_dir):
+        with open(config_dir, 'r') as file:
+            config = yaml.safe_load(file)
+        
+        self.fov = config['camera']['fovy']
+        self.width = config['camera']['width']
+        self.height = config['camera']['height']
+        self.focal_pixel = self.height/ (2*np.tan(self.fov/2 * np.pi / 180))
+        cx = self.width/2
+        cy = self.height/2
+        self.cam_K = np.array([
+            [-self.focal_pixel, 0, cx],
+            [0, self.focal_pixel, cy],
+            [0, 0, 1]
+        ])
+        
+class MeasurementSubscriber:
+    def __init__(self, vis_id):
+        self.meas_sub = rospy.Subscriber("/simulator/measurement_"+str(vis_id), robotMeasurement, self.callback)
+        self.last_msg = robotMeasurement()
+        
+    def callback(self, msg:robotMeasurement):
+        self.last_msg = msg
+        
+class ViewSubscriber:
+    def __init__(self, vis_id):
+        self.cam_sub = rospy.Subscriber("/simulator/view_"+str(vis_id), Image, self.callback)
+        self.last_msg = Image()
+    
+    def callback(self, msg:Image):
+        self.last_msg = msg
+        
 class MeshVisualizer:
     def __init__(self):
         rospy.init_node("mesh_visualizer_rviz")
         self.sub = rospy.Subscriber("/simulator/mesh_GT", mesh, self.callback)
-        self.pub = rospy.Publisher("/cloth_mesh_marker", Marker, queue_size=1)
+        self.marker_pub = rospy.Publisher("/cloth_mesh_marker", Marker, queue_size=1)
         self.frame_id = rospy.get_param("~frame_id", "world")
-
-    def callback(self, msg:mesh):
+        
+        # for projection test
+        config_dir = rospy.get_param("~param")
+        self.cam_param = CameraParameters(config_dir)
+        vis_id = 1
+        self.meas_sub = MeasurementSubscriber(vis_id)
+        self.view_sub = ViewSubscriber(vis_id)
+        self.proj_pub = rospy.Publisher("/mesh_cam_projection", Image, queue_size=1)
+        self.bridge = CvBridge()
+        self.project_onto_original = False
+        
+    def generate_markers(self, msg:mesh):
         rows, cols = msg.rows, msg.cols
         if len(msg.positions) != rows * cols:
             rospy.logwarn("Mesh size mismatch")
@@ -52,8 +122,60 @@ class MeshVisualizer:
                 p2 = Point(*positions[i + 1, j])
                 marker.points.append(p1)
                 marker.points.append(p2)
+        
+        return marker
+        
+    def project_points_to_cam(self, msg:mesh, to_original):
+        # construct camera matrix
+        proj_msg = Image()
+        view_msg = self.view_sub.last_msg
+        measurement_msg = self.meas_sub.last_msg
+        
+        if view_msg.header.stamp.to_sec() == 0:
+            return Image()
+        
+        if (measurement_msg.header.stamp - msg.header.stamp).to_sec() > 0.01:
+            print("mesh-cam time mismatch")
+        
+        cam_P = get_camera_p(self.cam_param.cam_K, measurement_msg)
+        if to_original:
+            projection = self.bridge.imgmsg_to_cv2(view_msg).copy()
+            color = (0, 255, 255)
+            encoding = "bgr8"
+        else:
+            projection = np.zeros((self.cam_param.height, self.cam_param.width), dtype=np.uint8)
+            color = 255
+            encoding = "mono8"
+            
+        positions = [np.array([p.x, p.y, p.z, 1]) for p in msg.positions]
+        for p in positions:
+            proj_pos = cam_P @ p
+    
+            if abs(proj_pos[2])>0.01:
+                proj_pos /= proj_pos[2]
+            else:
+                continue
+                
+            col = round(proj_pos[0])
+            row = round(proj_pos[1])
+            
+            if col > self.cam_param.width or row > self.cam_param.height:
+                continue
+            
+            cv2.circle(projection, (col, row), 5, color, -1)
+        
+        proj_msg = self.bridge.cv2_to_imgmsg(projection, encoding)
+        return proj_msg
+        
 
-        self.pub.publish(marker)
+    def callback(self, msg:mesh):
+        # generate marker and publish
+        marker = self.generate_markers(msg)
+        self.marker_pub.publish(marker)
+        
+        # project points to camera and publish
+        projection = self.project_points_to_cam(msg, self.project_onto_original)
+        self.proj_pub.publish(projection)
 
     def run(self):
         rospy.spin()

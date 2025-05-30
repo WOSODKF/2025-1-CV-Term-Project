@@ -122,7 +122,7 @@ Simulator::Simulator(std::shared_ptr<config_t> config): _config(config) {
 
   // visualization option
   // _option.flags[mjVIS_COM] = 1;
-  // _option.flags[mjVIS_SKIN] = 0;
+  _option.flags[mjVIS_SKIN] = 0;
   _option.flags[mjVIS_CAMERA] = 1;
   // _option.flags[mjVIS_PERTFORCE] = 1;
   // _option.flags[mjVIS_CONTACTFORCE] = 1;

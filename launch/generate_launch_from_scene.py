@@ -80,7 +80,9 @@ vis_node = ET.SubElement(launch, "node", {
     "type": "mesh_visualizer",
     "output": "$(arg output)"
 })
+ET.SubElement(vis_node, "param", name="param", value="$(arg param)")
 ET.SubElement(vis_node, "param", name="frame_id", value="world")
+
 
 # Per-agent groups
 for i in agent_ids:

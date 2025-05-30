@@ -79,7 +79,7 @@ class ImageSegmentor:
         self.mask_pub[agent_ID].pub()
     
         # segmentation test
-        if agent_ID == 3:
+        if agent_ID == 0:
             self.seg_vis_pub.publish(self.bridge.cv2_to_imgmsg(255 * data, encoding="mono8"))
         
 class ViewSubscriber:
@@ -89,7 +89,7 @@ class ViewSubscriber:
         self.agent_ID = agent_ID
         self.sub_topic_name = "simulator/view_" + str(agent_ID)
         self.subscriber = rospy.Subscriber(self.sub_topic_name, Image, self.callback)
-    
+        
     def callback(self, msg):
         # self.last_msg = msg
         if self.parent is not None:

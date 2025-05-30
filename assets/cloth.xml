@@ -11,7 +11,7 @@
 
   <worldbody>
     <light pos="0 0 1.5" dir="0 0 -1" directional="false"/>
-    <flexcomp name="cloth" type="grid" count="16 16 1" spacing=".1 .1 .1" pos="0 0 0.1"
+    <flexcomp name="cloth" type="grid" count="17 17 1" spacing=".1 .1 .1" pos="0 0 0.1"
               radius=".001" mass="1" dim="2" rgba="0.5 0.5 0.5 1.0">
       <contact condim="3" solref="0.01 1" solimp=".95 .99 .0001" contype="4" conaffinity="65535" selfcollide="none"/>
       <edge equality="false" damping="2"/>

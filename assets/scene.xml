@@ -31,10 +31,10 @@
   </worldbody>
 
   <equality>
-    <weld name="grasp_0" body1="wrist_y2_link_0" body2="cloth_255" active="true" solref="0.002 1" solimp="0.99 0.99 0.01" relpose="0 0.15 0 0.3827 0 0 -0.9239" torquescale="0"/>
-    <weld name="grasp_1" body1="wrist_y2_link_1" body2="cloth_240" active="true" solref="0.002 1" solimp="0.99 0.99 0.01" relpose="0 0.15 0 0.9239 0 0 -0.3827" torquescale="0"/>
+    <weld name="grasp_0" body1="wrist_y2_link_0" body2="cloth_288" active="true" solref="0.002 1" solimp="0.99 0.99 0.01" relpose="0 0.15 0 0.3827 0 0 -0.9239" torquescale="0"/>
+    <weld name="grasp_1" body1="wrist_y2_link_1" body2="cloth_272" active="true" solref="0.002 1" solimp="0.99 0.99 0.01" relpose="0 0.15 0 0.9239 0 0 -0.3827" torquescale="0"/>
     <weld name="grasp_2" body1="wrist_y2_link_2" body2="cloth_0" active="true" solref="0.002 1" solimp="0.99 0.99 0.01" relpose="0 0.15 0 0.9239 0 0 0.3827" torquescale="0"/>
-    <weld name="grasp_3" body1="wrist_y2_link_3" body2="cloth_15" active="true" solref="0.002 1" solimp="0.99 0.99 0.01" relpose="0 0.15 0 0.3827 0 0 0.9239" torquescale="0"/>
+    <weld name="grasp_3" body1="wrist_y2_link_3" body2="cloth_16" active="true" solref="0.002 1" solimp="0.99 0.99 0.01" relpose="0 0.15 0 0.3827 0 0 0.9239" torquescale="0"/>
   </equality>
 
 </mujoco>

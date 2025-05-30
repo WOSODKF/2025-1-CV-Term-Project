@@ -15,8 +15,8 @@ measure:
 
 mesh:
   GT_mesh: true
-  rows: 8
-  cols: 8  
+  rows: 9
+  cols: 9  
   mesh_init_time: 0.0
   
 robot:

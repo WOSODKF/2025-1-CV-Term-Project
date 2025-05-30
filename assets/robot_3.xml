@@ -32,7 +32,7 @@
 
   <worldbody>
     <!-- <light name="spotlight_3" mode="targetbodycom" target="wrist_z_link_3" pos="0 -1 2"/> -->
-    <body name="base_3" euler="0 0 -3.1416" pos="0 1.0 0" childclass="ur5e">
+    <body name="base_3" euler="0 0 -3.1416" pos="0 1.2 0" childclass="ur5e">
       <inertial mass="4.0" pos="0 0 0" diaginertia="0.004433 0.004433 0.0072"/>
       <geom type="cylinder" size="0.09 0.05" rgba="0.3 0.3 0.3 1"/>
       <body name="shoulder_link_3" pos="0 0 0.163">
