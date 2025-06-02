@@ -15,6 +15,13 @@ mask_data_t MaskSubscriber::get_data() {
 
 void MaskSubscriber::callback(cv_project::clothMask msg) {
   _last_mask_data.update(msg);
+  if(_flag_callback){
+    _flag_callback(msg.header.frame_id);
+  }
+}
+
+void MaskSubscriber::set_flag_callback(std::function<void(const std::string&)> flag_callback){
+  _flag_callback = std::move(flag_callback);
 }
 
 std::shared_ptr<MaskSubscriber> make_mask_subscriber(

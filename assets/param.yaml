@@ -15,9 +15,13 @@ measure:
 
 mesh:
   GT_mesh: true
-  rows: 9
-  cols: 9  
   mesh_init_time: 0.0
+  rows: 9
+  cols: 9
+  spacing: 0.2  # keep consistent with rows and cols
+  m_0: 15.0     # initial guess of total mass(kg)
+  k_0: 1e10     # initial guess of stiffness coefficient(N/m)
+  beta_0: 1000.0   # initial guess of damping coefficient
   
 robot:
   l01: 0.163
@@ -38,3 +42,8 @@ camera:
   width: 640
   height: 360
   # config on robot arm
+  
+XPBD:
+  max_iter: 50
+  correction_iter: 20
+  conv_crit: 1e-3 #not in use (0602

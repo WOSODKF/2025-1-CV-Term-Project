@@ -2,6 +2,8 @@
 
 #include <string>
 #include <memory>
+#include <Eigen/Dense>
+#include <cmath>
 
 struct sim_param_t{
   double g;
@@ -24,8 +26,12 @@ struct measure_param_t{
 struct mesh_sim_param_t {
   bool GT_mesh;
   double mesh_init_time;
+  double spacing;
   int rows;
   int cols;
+  double m_0;
+  double k_0;
+  double beta_0;
 };
 
 struct robot_param_t {
@@ -48,6 +54,17 @@ struct camera_param_t{
   int fovy;
   int width;
   int height;
+  double focal_pixel;
+  Eigen::Matrix3d K;
+
+  Eigen::MatrixXd compute_P(const Eigen::Vector3d& cam_pos, const Eigen::Matrix3d& cam_rot);
+};
+
+struct XPBD_param_t{
+  int max_iter;
+  int correction_iter;
+  double conv_crit;
+  int strain_constraint_num;
 };
 
 struct config_t {
@@ -59,6 +76,7 @@ struct config_t {
   robot_param_t robot;
   robot_IK_param_t IK;
   camera_param_t camera;
+  XPBD_param_t xpbd;
 };
 
 std::shared_ptr<config_t> get_config();

@@ -72,7 +72,7 @@ class ImageSegmentor:
             data = np.zeros((H,W), dtype=np.uint8)
             
         # store result to publisher
-        msg = self.mask_to_msg(data)
+        msg = self.mask_to_msg(data, image_msg.header)
         self.mask_pub[agent_ID].update_msg(msg)
     
         # publish data 

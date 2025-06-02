@@ -13,7 +13,7 @@ public:
   MeshPublisher(
     ros::NodeHandle& node, const std::string& name,
     const mesh_data_t& mesh_info);
-  void update(const mesh_data_t& mesh, bool initial);
+  void update(const mesh_data_t& mesh, bool initial = false);
   void pub();
 
 private:

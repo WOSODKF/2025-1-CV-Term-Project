@@ -12,6 +12,13 @@ robot_measurement_t MeasurementSubscriber::get_data() {
 
 void MeasurementSubscriber::callback(cv_project::robotMeasurement msg) {
   _last_measurement_data.update(msg);
+  if (_flag_callback){
+    _flag_callback(msg.header.frame_id);
+  }
+}
+
+void MeasurementSubscriber::set_flag_callback(std::function<void(const std::string&)> flag_callback){
+  _flag_callback = std::move(flag_callback);
 }
 
 std::shared_ptr<MeasurementSubscriber> make_measurement_subscriber(

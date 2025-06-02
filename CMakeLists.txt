@@ -13,6 +13,7 @@ project(cv_project)
 # link_directories("~/mujoco/mujoco-3.2.0/lib")
 include_directories("$ENV{HOME}/mujoco/mujoco-3.3.1/include")
 link_directories("$ENV{HOME}/mujoco/mujoco-3.3.1/lib")
+include_directories("third_party/autodiff")
 
 find_package(yaml-cpp REQUIRED)
 find_package(glfw3 REQUIRED)
@@ -95,6 +96,7 @@ target_sources(
   src/mesh_estimator/ros_io/mask_subscriber.cpp
   src/mesh_estimator/ros_io/measurement_subscriber.cpp
   src/mesh_estimator/ros_io/param_subscriber.cpp
+  src/mesh_estimator/ros_io/initial_mesh_subscriber.cpp
   src/utils/config.cpp
   src/utils/data_struct.cpp
   src/utils/math.cpp
@@ -114,6 +116,7 @@ target_link_libraries(
   ${catkin_LIBRARIES}
   yaml-cpp
   mujoco
+  glfw
   Eigen3::Eigen
   ${OpenCV_LIBS}
 )

@@ -67,8 +67,12 @@ class ViewSubscriber:
 class MeshVisualizer:
     def __init__(self):
         rospy.init_node("mesh_visualizer_rviz")
-        self.sub = rospy.Subscriber("/simulator/mesh_GT", mesh, self.callback)
-        self.marker_pub = rospy.Publisher("/cloth_mesh_marker", Marker, queue_size=1)
+        self.gt_sub = rospy.Subscriber("/simulator/mesh_GT", mesh, self.gt_callback)
+        self.gt_marker_pub = rospy.Publisher("/GT_mesh_marker", Marker, queue_size=1)
+        self.frame_id = rospy.get_param("~frame_id", "world")
+        
+        self.est_sub =rospy.Subscriber("/mesh_estimator/mesh_estimated", mesh, self.est_callback)
+        self.est_marker_pub = rospy.Publisher("/Est_mesh_marker", Marker, queue_size=1)
         self.frame_id = rospy.get_param("~frame_id", "world")
         
         # for projection test
@@ -81,7 +85,7 @@ class MeshVisualizer:
         self.bridge = CvBridge()
         self.project_onto_original = False
         
-    def generate_markers(self, msg:mesh):
+    def generate_markers(self, msg:mesh, is_estimate):
         rows, cols = msg.rows, msg.cols
         if len(msg.positions) != rows * cols:
             rospy.logwarn("Mesh size mismatch")
@@ -93,17 +97,24 @@ class MeshVisualizer:
 
         marker = Marker()
         marker.header = msg.header
-        marker.header.frame_id = self.frame_id
+        # marker.header.frame_id = self.frame_id
+        marker.header.frame_id = "map"
         marker.ns = "cloth_mesh"
         marker.id = 0
         marker.type = Marker.LINE_LIST
         marker.action = Marker.ADD
         marker.scale.x = 0.005  # line width
 
-        marker.color.r = 0.2
-        marker.color.g = 0.8
-        marker.color.b = 1.0
-        marker.color.a = 1.0
+        if is_estimate:
+            marker.color.r = 0.8
+            marker.color.g = 0.2
+            marker.color.b = 1.0
+            marker.color.a = 1.0
+        else:
+            marker.color.r = 0.2
+            marker.color.g = 0.8
+            marker.color.b = 1.0
+            marker.color.a = 1.0
 
         marker.points = []
 
@@ -168,14 +179,19 @@ class MeshVisualizer:
         return proj_msg
         
 
-    def callback(self, msg:mesh):
+    def gt_callback(self, msg:mesh):
         # generate marker and publish
-        marker = self.generate_markers(msg)
-        self.marker_pub.publish(marker)
+        marker = self.generate_markers(msg, is_estimate=False)
+        self.gt_marker_pub.publish(marker)
         
         # project points to camera and publish
         projection = self.project_points_to_cam(msg, self.project_onto_original)
         self.proj_pub.publish(projection)
+        
+    def est_callback(self, msg:mesh):
+        # print(msg.positions)
+        marker = self.generate_markers(msg, is_estimate=True)
+        self.est_marker_pub.publish(marker)        
 
     def run(self):
         rospy.spin()

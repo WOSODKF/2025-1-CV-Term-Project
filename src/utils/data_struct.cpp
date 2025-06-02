@@ -151,7 +151,7 @@ void mesh_data_t::init(int first_body_id, int rows, int cols) {
   points = std::vector<Vector3d>(rows * cols);
 }
 
-void mesh_data_t::update(const mjModel* m, const mjData* d) {
+void mesh_data_t::update_by_mj(const mjModel* m, const mjData* d) {
   t = d->time;
 
   const int full_size = 17;
@@ -172,7 +172,36 @@ void mesh_data_t::update(const mjModel* m, const mjData* d) {
   // std::cout << "----------------------------------------------" << std::endl;
 }
 
-void robot_measurement_t::update(const cv_project::robotMeasurement& msg){
+void mesh_data_t::update_by_points(
+  const std::vector<Vector3d>& points, double t) {
+  this->points = points;
+  this->t = t;
+}
+
+void undeformed_mesh_t::set(std::shared_ptr<config_t> config) {
+  rows = config->mesh.rows;
+  cols = config->mesh.cols;
+  spacing = config->mesh.spacing;
+  points.resize(rows * cols);
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      points[cols * i + j] << i, j;
+      points[cols* i + j] *= spacing;
+    }
+  }
+}
+
+void est_mesh_param_t::init(std::shared_ptr<config_t> config) {
+  t = 0.0;
+
+  rows = config->mesh.rows;
+  cols = config->mesh.cols;
+  spacing = config->mesh.spacing;
+  m = config->mesh.m_0;
+  k = config->mesh.k_0;
+  beta = config->mesh.beta_0;
+}
+void robot_measurement_t::update(const cv_project::robotMeasurement& msg) {
   t = msg.header.stamp.toSec();
 
   end_pos = point_msg_to_eigen(msg.end_pos);
@@ -195,7 +224,7 @@ void mask_data_t::init(std::shared_ptr<config_t> config) {
   height = config->camera.height;
   width = config->camera.width;
 
-  data.resize(height, width);
+  data = MatrixXi::Zero(height, width);
 }
 
 void mask_data_t::update(const cv_project::clothMask& msg) {

@@ -14,11 +14,7 @@
     <param name="agent_num" value="4"/>
     <param name="model_dir" value="$(arg model)"/>
   </node>
-  <node name="mesh_estimator" pkg="$(arg package)" type="mesh_estimator" output="$(arg output)">
-    <param name="xml_file" value="$(arg xml_file)"/>
-    <param name="param" value="$(arg param)"/>
-    <param name="agent_num" value="4"/>
-  </node>
+
   <!-- <node name="param_estimator" pkg="$(arg package)" type="param_estimator" output="$(arg output)">
     <param name="param" value="$(arg param)"/>
     <param name="agent_num" value="4"/>
@@ -51,4 +47,9 @@
       <param name="param" value="$(arg param)"/>
     </node>
   </group>
+  <node name="mesh_estimator" pkg="$(arg package)" type="mesh_estimator" output="$(arg output)">
+    <param name="xml_file" value="$(arg xml_file)"/>
+    <param name="param" value="$(arg param)"/>
+    <param name="agent_num" value="4"/>
+  </node>
 </launch>

@@ -218,6 +218,17 @@ void Simulator::run() {
 
     auto dyna_end = std::chrono::steady_clock::now();
 
+    // get mesh data & publish
+    bool init_mesh = !init_mesh_sent &&
+      _data->time > _config->mesh.mesh_init_time && segmentor_inited;
+
+    if (init_mesh || (_config->mesh.GT_mesh && segmentor_inited)) {
+      _mesh.update_by_mj(_model, _data);
+      _mesh_pub->update(_mesh, init_mesh);
+      _mesh_pub->pub();
+      init_mesh_sent = true;
+    }
+
     // update view & publish
     bool render_view = _config->view.render_view && _run &&
       _data->time > _config->measure.measure_start_time && segmentor_inited;
@@ -248,17 +259,6 @@ void Simulator::run() {
         _robot[id]->publish_measurement();
       }
       last_measure_time = _data->time;
-    }
-
-    // get mesh data & publish
-    bool init_mesh = !init_mesh_sent &&
-      _data->time > _config->mesh.mesh_init_time && segmentor_inited;
-
-    if (init_mesh || (_config->mesh.GT_mesh && segmentor_inited)) {
-      _mesh.update(_model, _data);
-      _mesh_pub->update(_mesh, init_mesh);
-      _mesh_pub->pub();
-      init_mesh_sent = true;
     }
 
     // reset behavior

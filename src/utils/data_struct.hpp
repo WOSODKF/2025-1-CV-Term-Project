@@ -110,7 +110,7 @@ struct est_error_t{
 };
 
 struct mesh_data_t{
-  int first_body_id;
+  int first_body_id;  // only for simulator
 
   double t;
   int rows;
@@ -118,13 +118,31 @@ struct mesh_data_t{
   std::vector<Vector3d> points; // row-major
 
   void init(int first_body_id, int rows, int cols);
-  void update(const mjModel* m, const mjData* d);
+  void update_by_mj(const mjModel* m, const mjData* d);
+  void update_by_points(const std::vector<Vector3d>& points, double t);
 };
 
-struct est_mesh_param_t{
+struct undeformed_mesh_t{
+  int rows;
+  int cols;
+  int spacing;
+  std::vector<Vector2d> points;
+
+  void set(std::shared_ptr<config_t> config);
+};
+
+struct est_mesh_param_t {
   double t;
 
-  /*TODO*/
+  int rows;
+  int cols;
+  double spacing;
+  double m;
+  double k;
+  double beta;
+
+  void init(std::shared_ptr<config_t> config);
+  void update(); // TODO
 };
 
 /* For subscribers */
