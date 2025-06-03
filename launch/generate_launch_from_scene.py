@@ -84,6 +84,22 @@ vis_node = ET.SubElement(launch, "node", {
 ET.SubElement(vis_node, "param", name="param", value="$(arg param)")
 ET.SubElement(vis_node, "param", name="frame_id", value="world")
 
+# # rqt_image_view
+# image_view_node = ET.SubElement(launch, "node", {
+#     "name": "rqt_image_view",
+#     "pkg": "rqt_image_view",
+#     "type": "rqt_image_view",
+#     "output": "$(arg output)"
+# })
+# 
+# # rviz
+# rviz_node = ET.SubElement(launch, "node", {
+#     "name": "rviz",
+#     "pkg": "rviz",
+#     "type": "rviz",
+#     "output": "$(arg output)"
+# })
+
 
 # Per-agent groups
 for i in agent_ids:

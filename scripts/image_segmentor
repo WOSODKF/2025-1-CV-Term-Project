@@ -64,7 +64,7 @@ class ImageSegmentor:
     def segment_image(self, image_msg:Image, agent_ID):   # called by the callback of ViewSubscribers
         # segment image
         img = self.bridge.imgmsg_to_cv2(image_msg) # BGR image
-        results = self.model(img, verbose=False)[0]
+        results = self.model(img, verbose=True)[0]
         if results.masks is not None and results.masks.data is not None:
             data = np.any(results.masks.data.cpu().numpy(), axis=0).astype(np.uint8)
         else:

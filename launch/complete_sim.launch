@@ -52,4 +52,6 @@
     <param name="param" value="$(arg param)"/>
     <param name="agent_num" value="4"/>
   </node>
+  <!-- <node name="rqt_image_view" pkg="rqt_image_view" type="rqt_image_view" output="$(arg output)"/>
+  <node name="rviz" pkg="rviz" type="rviz" output="$(arg output)"/> -->
 </launch>

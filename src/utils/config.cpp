@@ -78,8 +78,7 @@ camera_param_t get_camera_param(YAML::Node node) {
   return param;
 }
 Eigen::MatrixXd camera_param_t::compute_P(
-  const Eigen::Vector3d& cam_pos,
-  const Eigen::Matrix3d& cam_rot) {
+  const Eigen::Vector3d& cam_pos, const Eigen::Matrix3d& cam_rot) {
   Eigen::Matrix4d T_cs;
   T_cs.setIdentity();
   T_cs.topLeftCorner(3, 3) = cam_rot;
@@ -94,7 +93,10 @@ XPBD_param_t get_xpbd_param(YAML::Node node) {
   return XPBD_param_t {
     .max_iter = node["max_iter"].as<int>(),
     .correction_iter = node["correction_iter"].as<int>(),
-    .conv_crit = node["conv_crit"].as<double>()};
+    .visual_correction_on = node["visual_correction_on"].as<bool>(),
+    .conv_crit = node["conv_crit"].as<double>(),
+    .alpha_chamfer = node["alpha_chamfer"].as<double>(),
+    .beta_chamfer = node["beta_chamfer"].as<double>()};
 }
 
 std::shared_ptr<config_t> get_config() {

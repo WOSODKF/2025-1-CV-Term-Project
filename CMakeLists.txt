@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.27)
+cmake_policy(SET CMP0074 NEW)
 
 set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 set(CMAKE_POLICY_DEFAULT_CMP0072 NEW)
@@ -13,7 +14,7 @@ project(cv_project)
 # link_directories("~/mujoco/mujoco-3.2.0/lib")
 include_directories("$ENV{HOME}/mujoco/mujoco-3.3.1/include")
 link_directories("$ENV{HOME}/mujoco/mujoco-3.3.1/lib")
-include_directories("third_party/autodiff")
+include_directories("third_party")
 
 find_package(yaml-cpp REQUIRED)
 find_package(glfw3 REQUIRED)

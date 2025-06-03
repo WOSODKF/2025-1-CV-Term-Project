@@ -55,12 +55,13 @@
                 <inertial mass="1.219" pos="0 0 0.1" diaginertia="0.00256 0.00256 0.00219"/>
                 <joint name="wrist_z_joint_1" class="size1" axis="0 0 1"/>
                 <geom type="capsule" fromto="0 0 0 0 0 0.1" size="0.035"/>
-                <camera name="cam_1" pos="0 0 -0.1" euler="2.0 0 3.1416" fovy="60"/>
+                <!-- <camera name="cam_1" pos="0 0 -0.1" euler="2.0 0 3.1416" fovy="60"/> -->
                 <body name="wrist_y2_link_1" pos="0 0 0.1" euler="0 3.1416 0">
                   <inertial mass="0.1889" pos="0 0.0771683 0" quat="1 0 0 1" diaginertia="0.0001321 0.000099 0.000099"/>
                   <joint name="wrist_y2_joint_1" class="size1" axis="0 1 0"/>
                   <geom type="capsule" fromto="0 0 0 0 0.1 0" size="0.03"/>
                   <site name="attachment_site_1" pos="0 0.15 0" quat="-1 1 0 0" size="0.02" rgba="1 0 0 0.5"/>
+                  <camera name="cam_1" pos="0 0 0.2" euler="1.1416 0 0" fovy="60"/>
                 </body>
               </body>
             </body>

@@ -241,7 +241,7 @@ const Vector3d matLogSO3(const Matrix3d& R) {
   // std::cout << "coeff: " << coeff << std::endl;
 
   // exception for PI rot
-  if (abs(theta - PI) < tolerance) {
+  if (abs(theta - MY_PI) < tolerance) {
     // std::cout << "special case: theta = PI" << std::endl;
     Matrix3d omHatSq = 0.5 * (R - Matrix3d::Identity());
     Vector3d omPi = {

@@ -63,7 +63,10 @@ struct camera_param_t{
 struct XPBD_param_t{
   int max_iter;
   int correction_iter;
+  bool visual_correction_on;
   double conv_crit;
+  double alpha_chamfer;
+  double beta_chamfer;
   int strain_constraint_num;
 };
 

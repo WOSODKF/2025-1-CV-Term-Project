@@ -12,7 +12,9 @@
 #include "utils/mesh_publisher.hpp"
 
 #include <Eigen/Dense>
+#include <opencv4/opencv2/opencv.hpp>
 #include <vector>
+#include <chrono>
 
 using namespace Eigen;
 
@@ -35,10 +37,10 @@ private:
   std::vector<robot_measurement_t> _prev_measurement;
   est_mesh_param_t _mesh_param;
   undeformed_mesh_t _undeformed_mesh;
-  // mesh_data_t _est_mesh;
-  mesh_data_t _last_mesh;
+  mesh_data_t _est_mesh;
+  mesh_data_t _prev_mesh;
   mesh_data_t _GT_mesh;
-  std::vector<Vector3d> _last_vels; // mesh vertex velocities
+  std::vector<Vector3d> _last_vels;  // mesh vertex velocities
 
   std::shared_ptr<ErrorPublisher> _err_pub;
   std::shared_ptr<ParamSubscriber> _param_sub;
@@ -52,9 +54,9 @@ private:
   bool _initial_mesh_ready;
 
   void update_mesh();
-  void correct_mesh();
   void publish_data();
 
+  void correct_mesh();
   void compute_XPBD();
 
   void measure_receiving_callback(const std::string& frame_id);
@@ -64,13 +66,29 @@ private:
 std::shared_ptr<MeshEstimator> make_mesh_estimator(
   std::shared_ptr<config_t> config, ros::NodeHandle& node);
 
+/* XPBD computation */
+void compute_single_XPBD_step(
+  std::vector<Vector3d>& points, const std::vector<Vector3d>& prev_points,
+  std::vector<double>& lambda,
+  const std::vector<robot_measurement_t>& measurement, const double gamma,
+  const double l_0, const double k, const double m_i, const int rows,
+  const int cols, const int _agent_num);
+
 void compute_energy_constraint_projection(
   Vector3d& x0, Vector3d& x1, const Vector3d& x0_prev, const Vector3d& x1_prev,
   double& lambda, const double l, const double k, const double m,
   const double gamma);
-// Matrix2<dual> compute_deformation_grad(
-//   const Vector3<dual>& x1, const Vector3<dual>& x2, const Vector3<dual>& x3,
-//   const Vector2d& X2, const Vector2d& X3);
-// Vector3<dual> compute_strain_value(
-//   const Vector3<dual>& x1, const Vector3<dual>& x2, const Vector3<dual>& x3, const Vector2d& X2,
-//   const Vector2d& X3);
+
+/* Chamfer distance computation */
+void compute_single_chamfer_step();
+void compute_chamfer_distance_projection();
+// nanoflann_adaptor::NNResult find_nearest_neighbor(const Vector2d& query,
+// const mask_data_t& mask);
+
+struct NNResult {
+  double distance;
+  Vector2d point;
+};
+NNResult find_nearest_neighbor(
+  const Vector2d& query, const mask_data_t& mask, const int height,
+  const int width);

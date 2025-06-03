@@ -10,7 +10,7 @@
 
 using namespace Eigen;
 
-#define PI 3.14159265358979
+#define MY_PI 3.14159265358979
 
 bool isSO3(const Matrix3d& R);
 bool isSE3(const Matrix4d& T);
