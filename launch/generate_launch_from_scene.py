@@ -82,6 +82,7 @@ vis_node = ET.SubElement(launch, "node", {
     "output": "$(arg output)"
 })
 ET.SubElement(vis_node, "param", name="param", value="$(arg param)")
+ET.SubElement(vis_node, "param", name="agent_num", value=str(agent_num))
 ET.SubElement(vis_node, "param", name="frame_id", value="world")
 
 # # rqt_image_view

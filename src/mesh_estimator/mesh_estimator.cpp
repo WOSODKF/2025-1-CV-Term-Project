@@ -41,12 +41,19 @@ MeshEstimator::MeshEstimator(
   _vertex_num = _mesh_param.rows * _mesh_param.cols;
   _last_vels.resize(_vertex_num);
   _est_mesh.init(-1, _mesh_param.rows, _mesh_param.cols);
+  _corr_mesh.init(-1, _mesh_param.rows, _mesh_param.cols);
   _prev_mesh.init(-1, _mesh_param.rows, _mesh_param.cols);
   for (int i = 0; i < _vertex_num; i++) {
     _last_vels[i].setZero();
   }
 
-  _mesh_pub = make_mesh_publisher(node, "estimated", _est_mesh);
+  _est_mesh_pub = make_mesh_publisher(node, "estimated", _est_mesh);
+  _separate_corr_mesh = config->sim.separate_corr_mesh;
+  if (_separate_corr_mesh) {
+    _corr_mesh_pub = make_mesh_publisher(node, "corrected", _corr_mesh);
+  } else {
+    _corr_mesh_pub = nullptr;
+  }
 
   _xpbd_param = config->xpbd;
   _xpbd_param.strain_constraint_num =
@@ -62,46 +69,24 @@ MeshEstimator::MeshEstimator(
   _initial_mesh_ready = false;
   _all_mask_ready = false;
 
+  std::string pkg_dir = ros::package::getPath("cv_project");
+  std::string filename = pkg_dir + "/logs/mesh_timing_log.csv";
+  std::cout << "file:" << filename << std::endl;
+  _comp_log_file.open(filename, std::ios::out);
+  if (!_comp_log_file.is_open()) {
+    std::cerr << "Failed to open mesh_timing_log.csv for writing!" << std::endl;
+  } else {
+    _comp_log_file << "timestamp,correction_time_ms,prediction_time_ms\n";
+  }
   /* TODO: assign callback to measurement subscriber? (event-based running &
    * only ros::spin() in main fn.)*/
 }
-
-// void MeshEstimator::run() {
-//   while (ros::ok()) {
-//     /* main loop */
-//
-//     /* TODO: delay until seg node and mesh initialized (receive init message
-//      * from seg node) s*/
-//     // update_data();
-//     update_mesh();
-//     // publish_data();
-//   }
-// }
 
 /* Functions
 - From received data(masks, wrenches and poses) ...
 - Update mesh
 - Publish data
 */
-
-void MeshEstimator::update_mesh() {
-  /* TODO: run PBD / if mask received - run correction */
-  compute_XPBD();
-}
-
-// void MeshEstimator::update_data() {
-//   // update data to recently received data
-//   for (int i = 0; i < _agent_num; i++) {
-//     _mask[i] = _mask_sub[i]->get_data();  // judge if mask is new
-//     _measurement[i] = _measure_sub[i]->get_data();
-//   }
-//   // _mesh_param = _param_sub->get_data();
-// }
-
-void MeshEstimator::publish_data() {
-  //   _err_pub->update();
-  // _err_pub->pub();
-}
 
 void MeshEstimator::measure_receiving_callback(const std::string& frame_id) {
   // frame_id format: "robot_n"
@@ -136,29 +121,52 @@ void MeshEstimator::measure_receiving_callback(const std::string& frame_id) {
 
   // 0602 checked: time sync is well matched
   if (all_ready) {
+    _comp_log_file << _measure_sub[0]->get_data().t << ",";
     // publish mesh of last timestep
-    auto mesh_comp_start = std::chrono::steady_clock::now();
     if (_all_mask_ready & _xpbd_param.visual_correction_on) {
       // std::cout << "run visual correction" << std::endl;
+      auto mesh_corr_start = std::chrono::steady_clock::now();
       correct_mesh();
+      auto mesh_corr_fin = std::chrono::steady_clock::now();
+      auto mesh_corr_dura =
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+          mesh_corr_fin - mesh_corr_start);
+      _comp_log_file << mesh_corr_dura.count() << ",";
+      // std::cout << "mesh correction: " << mesh_corr_dura.count() << "ms"
+      //           << std::endl;
+      /* TODO: store correction time log into csv*/
+
       _all_mask_ready = false;
       for (int i = 0; i < _agent_num; i++) {
         _mask_ready[i] = false;
       }
     } else {
       _prev_mesh = _est_mesh;
+      _comp_log_file << 0.0 << ",";
     }
-    _mesh_pub->update(_est_mesh);
-    _mesh_pub->pub();
 
-    update_mesh();
+    _est_mesh_pub->update(_est_mesh);
+    _est_mesh_pub->pub();
+
+    /*Test*/
+    if (_separate_corr_mesh) {
+      _corr_mesh_pub->update(_corr_mesh);
+      _corr_mesh_pub->pub();
+    }
+    /*----*/
+
+    auto mesh_pred_start = std::chrono::steady_clock::now();
+    predict_mesh();
+    auto mesh_pred_fin = std::chrono::steady_clock::now();
+    auto mesh_pred_dura = std::chrono::duration_cast<std::chrono::milliseconds>(
+      mesh_pred_fin - mesh_pred_start);
+    // std::cout << "mesh prediction: " << mesh_pred_dura.count() << "ms"
+    //           << std::endl;
+    /* TODO: store prediction time log into csv */
+    _comp_log_file << mesh_pred_dura.count() << "\n";
     for (int i = 0; i < _agent_num; i++) {
       _measurement_ready[i] = false;
     }
-    auto mesh_comp_fin = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
-      mesh_comp_fin - mesh_comp_start);
-    std::cout << "computation time: " << duration.count() << "ms" << std::endl;
   }
 }
 
@@ -189,7 +197,7 @@ void MeshEstimator::mask_receiving_callback(const std::string& frame_id) {
   _all_mask_ready = all_ready;
 }
 
-void MeshEstimator::compute_XPBD() {
+void MeshEstimator::predict_mesh() {
   const double m_i = _mesh_param.m / _vertex_num;
   const double dt = 1.0 / _measure_rate;
   const double k = _mesh_param.k;  // alpha = 1/k
@@ -227,6 +235,7 @@ void MeshEstimator::compute_XPBD() {
 
 void MeshEstimator::correct_mesh() {
   /* Apply mask projection constraint */
+  std::cout << "correction on " << std::endl;
   const int mesh_rows = _mesh_param.rows;
   const int mesh_cols = _mesh_param.cols;
   const int cam_height = _camera_param.height;
@@ -262,8 +271,6 @@ void MeshEstimator::correct_mesh() {
 
   for (int iter = 0; iter < _xpbd_param.correction_iter; iter++) {
     /* modified champfer distance constraint */
-
-    /* MIGRATE TO compute_single_chamfer_step */
     int chamfer_idx = 0;
     for (int id = 0; id < _agent_num; id++) {
       auto cam_pos = _prev_measurement[id].cam_pos;
@@ -272,7 +279,6 @@ void MeshEstimator::correct_mesh() {
 
       for (int row = 0; row < mesh_rows; row++) {
         for (int col = 0; col < mesh_cols; col++) {
-          /* MIGRATE TO compute_chamfer_projection */
           /* Projection to each view */
           Vector3d& x = points[col + mesh_cols * row];
           const Vector3d x_prev = prev_points[col + mesh_cols * row];
@@ -280,9 +286,11 @@ void MeshEstimator::correct_mesh() {
           hom_pos << x, 1;
           Vector3d proj_pos = cam_P * hom_pos;
           Vector3d proj_pos_normalized;
-          if (proj_pos(2) > 0.01) {
-            proj_pos_normalized = proj_pos / proj_pos(2);
+          if (std::abs(proj_pos(2)) > 1e-4) {
+            proj_pos_normalized = proj_pos / proj_pos(2);  // col, row, 1
           } else {
+            // std::cout << "filtered(|z| < 1e-4): " << proj_pos.transpose()
+            //           << std::endl;
             chamfer_idx++;
             continue;
           }
@@ -291,20 +299,27 @@ void MeshEstimator::correct_mesh() {
           if (
             proj_col >= cam_width || proj_col < 0 || proj_row >= cam_height ||
             proj_row < 0) {
+            // std::cout << "filtered(out of view): "
+            //           << proj_pos_normalized.transpose() << std::endl;
             chamfer_idx++;
             continue;
           }
           if (_mask[id].data(proj_row, proj_col) == 1) {
+            // std::cout << "filtered(inside the mask): "
+            //           << proj_pos_normalized.transpose() << std::endl;
             chamfer_idx++;
             continue;
           }
 
           /* chamfer distance */
           /* approx nearest pixel and distance from distance transform */
-          // float dist = dist_transform[id].at<float>(proj_row, proj_col);
+          CV_Assert(labels[id].type() == CV_32SC1);
           int flat_idx = labels[id].at<int>(proj_row, proj_col);
-          Vector2d target_point(flat_idx / cam_width, flat_idx % cam_width);
-
+          Vector2d target_point(
+            flat_idx % cam_width, flat_idx / cam_width);  // (x, y) = (col, row)
+          // std::cout << "non-overlapping point detected:"
+          //           << proj_pos_normalized.segment<2>(0).transpose()
+          //           << std::endl;
           /* grad p */
           double t_ki = proj_pos(2);
           Vector3d dt_ki = cam_P.bottomLeftCorner(1, 3).transpose();
@@ -314,41 +329,47 @@ void MeshEstimator::correct_mesh() {
           /* constraint value & gradient */
           double C =
             (proj_pos_normalized.segment<2>(0) - target_point).squaredNorm();
-          Vector3d dC =
-            2 * dp_ki.transpose() * (proj_pos.segment<2>(0) - target_point);
+          Vector3d dC = 2 * dp_ki.transpose() *
+            (proj_pos_normalized.segment<2>(0) - target_point);
           double dLambda = (-C - alpha_chamfer * lambda_chamfer[chamfer_idx] -
                             gamma_chamfer * dC.transpose() * (x - x_prev)) /
             ((1 + gamma_chamfer) / m_i * dC.squaredNorm() + alpha_chamfer);
           x += dC * dLambda / m_i;
-          // if (!(dC * dLambda / m_i).isZero()) {
-          //   std::cout << "C:" << C << std::endl;
-          //   std::cout << "x - x_prev: " << x - x_prev << std::endl;
-          //   std::cout << "target_point: " << target_point << std::endl;
-          //   std::cout << "proj_pos: " << proj_pos_normalized.segment<2>(0)
-          //             << std::endl;
-          //   std::cout << "dx:" << dC * dLambda / m_i << std::endl;
-          // }
+          if (!(dC * dLambda / m_i).isZero()) {
+            std::cout << "C:" << C << std::endl;
+            std::cout << "x - x_prev: " << x - x_prev << std::endl;
+            std::cout << "target_point: " << target_point << std::endl;
+            std::cout << "proj_pos: " << proj_pos_normalized.segment<2>(0)
+                      << std::endl;
+            std::cout << "dx:" << dC * dLambda / m_i << std::endl;
+          }
           chamfer_idx++;
         }
       }
     }
-    /*-----------------------------------------------------------------------------*/
-
-    // compute_single_chamfer_step();
     /* run XPBD step for physical consistency */
-    compute_single_XPBD_step(
-      points, prev_points, lambda_xpbd, _prev_measurement, gamma_E, l_0, k, m_i,
-      mesh_rows, mesh_cols, _agent_num);
+    // if (iter % 5 == 0) {
+    //   compute_single_XPBD_step(
+    //     points, prev_points, lambda_xpbd, _prev_measurement, gamma_E, l_0, k,
+    //     m_i, mesh_rows, mesh_cols, _agent_num);
+    // }
   }
 
   /* update velocities */
   for (int i = 0; i < _vertex_num; i++) {
     _last_vels[i] = (points[i] - prev_points[i]) / dt;
   }
-  _est_mesh.update_by_points(points, _prev_measurement[0].t);
-  _est_mesh.rows = _mesh_param.rows;
-  _est_mesh.cols = _mesh_param.cols;
-  _prev_mesh = _est_mesh;
+  if (_separate_corr_mesh) {
+    _corr_mesh.update_by_points(points, _prev_measurement[0].t);
+    _corr_mesh.cols = _mesh_param.cols;
+    _corr_mesh.rows = _mesh_param.rows;
+    _prev_mesh = _corr_mesh;
+  } else {
+    _est_mesh.update_by_points(points, _prev_measurement[0].t);
+    _est_mesh.rows = _mesh_param.rows;
+    _est_mesh.cols = _mesh_param.cols;
+    _prev_mesh = _est_mesh;
+  }
 }
 
 /* XBPD computation */
@@ -452,23 +473,98 @@ void compute_energy_constraint_projection(
   x1 += dC.segment<3>(3) * dLambda / m;
 }
 
-/* Chamfer distance computation*/
-void compute_single_chamfer_step(
-  std::vector<Vector3d>& points, std::vector<double>& lambda,
-  const std::vector<robot_measurement_t>& measurement,
-  const std::vector<camera_param_t>& camera_param,
-  const std::vector<mask_data_t>& mask) {
-}
-
-void compute_chamfer_distance_projection(
-  Vector3d& x, double& lambda, const robot_measurement_t& measurement,
-  const camera_param_t& camera_param, const mask_data_t& mask) {
-}
-
 std::shared_ptr<MeshEstimator> make_mesh_estimator(
   std::shared_ptr<config_t> config, ros::NodeHandle& node) {
   return std::make_shared<MeshEstimator>(config, node);
 }
+
+// /* Chamfer distance computation */
+// void compute_single_chamfer_step(
+//   std::vector<Vector3d>& points, std::vector<double>& lambda_chamfer,
+//   int& chamfer_idx, const std::vector<Vector3d>& prev_points,
+//   const std::vector<robot_measurement_t> prev_measurement,
+//   const camera_param_t& camera_param, const std::vector<cv::Mat>& cv_mask,
+//   const std::vector<cv::Mat>& labels,
+//   const std::vector<cv::Mat>& dist_transform, const int agent_num,
+//   const int mesh_rows, const int mesh_cols, const double alpha_chamfer,
+//   const double gamma_chamfer, const double m_i
+// ) {
+//   /* MIGRATE TO compute_single_chamfer_step */
+//   int chamfer_idx = 0;
+//   for (int id = 0; id < agent_num; id++) {
+//     auto cam_pos = prev_measurement[id].cam_pos;
+//     auto cam_rot = prev_measurement[id].cam_rot;
+//     auto cam_P = camera_param.compute_P(cam_pos, cam_rot);
+//     int cam_width = camera_param.width;
+//     int cam_height = camera_param.height;
+//
+//     for (int row = 0; row < mesh_rows; row++) {
+//       for (int col = 0; col < mesh_cols; col++) {
+//         /* Projection to each view */
+//         Vector3d& x = points[col + mesh_cols * row];
+//         const Vector3d x_prev = prev_points[col + mesh_cols * row];
+//         Vector4d hom_pos;
+//         hom_pos << x, 1;
+//         Vector3d proj_pos = cam_P * hom_pos;
+//         Vector3d proj_pos_normalized;
+//         if (proj_pos(2) > 0.01) {
+//           proj_pos_normalized = proj_pos / proj_pos(2);
+//         } else {
+//           chamfer_idx++;
+//           continue;
+//         }
+//         int proj_col = static_cast<int>(std::round(proj_pos_normalized(0)));
+//         int proj_row = static_cast<int>(std::round(proj_pos_normalized(1)));
+//         if (
+//           proj_col >= cam_width || proj_col < 0 || proj_row >= cam_height ||
+//           proj_row < 0) {
+//           chamfer_idx++;
+//           continue;
+//         }
+//         if (cv_mask[id].data[proj_row, proj_col] == 1) {
+//           chamfer_idx++;
+//           continue;
+//         }
+//
+//         /* chamfer distance */
+//         /* approx nearest pixel and distance from distance transform */
+//         // float dist = dist_transform[id].at<float>(proj_row, proj_col);
+//         int flat_idx = labels[id].at<int>(proj_row, proj_col);
+//         Vector2d target_point(flat_idx / cam_width, flat_idx % cam_width);
+//
+//         /* grad p */
+//         double t_ki = proj_pos(2);
+//         Vector3d dt_ki = cam_P.bottomLeftCorner(1, 3).transpose();
+//         Matrix<double, 2, 3> dp_ki = cam_P.topLeftCorner(2, 3) / t_ki -
+//           proj_pos_normalized.segment<2>(0) / t_ki * dt_ki.transpose();
+//
+//         /* constraint value & gradient */
+//         double C =
+//           (proj_pos_normalized.segment<2>(0) - target_point).squaredNorm();
+//         Vector3d dC =
+//           2 * dp_ki.transpose() * (proj_pos.segment<2>(0) - target_point);
+//         double dLambda = (-C - alpha_chamfer * lambda_chamfer[chamfer_idx] -
+//                           gamma_chamfer * dC.transpose() * (x - x_prev)) /
+//           ((1 + gamma_chamfer) / m_i * dC.squaredNorm() + alpha_chamfer);
+//         x += dC * dLambda / m_i;
+//         // if (!(dC * dLambda / m_i).isZero()) {
+//         //   std::cout << "C:" << C << std::endl;
+//         //   std::cout << "x - x_prev: " << x - x_prev << std::endl;
+//         //   std::cout << "target_point: " << target_point << std::endl;
+//         //   std::cout << "proj_pos: " << proj_pos_normalized.segment<2>(0)
+//         //             << std::endl;
+//         //   std::cout << "dx:" << dC * dLambda / m_i << std::endl;
+//         // }
+//         chamfer_idx++;
+//       }
+//     }
+//   }
+// }
+//
+// void compute_chamfer_distance_projection(
+//   Vector3d& x, double& lambda, const robot_measurement_t& measurement,
+//   const camera_param_t& camera_param, const mask_data_t& mask) {
+// }
 
 // MatrixXi projection;
 // projection.resize(_camera_param.height, _camera_param.width);

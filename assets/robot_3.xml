@@ -35,6 +35,7 @@
     <body name="base_3" euler="0 0 -3.1416" pos="0 1.2 0" childclass="ur5e">
       <inertial mass="4.0" pos="0 0 0" diaginertia="0.004433 0.004433 0.0072"/>
       <geom type="cylinder" size="0.09 0.05" rgba="0.3 0.3 0.3 1"/>
+      <camera name="cam_3" pos="0 0 1.5" euler="0.9 0 0" fovy="60"/>
       <body name="shoulder_link_3" pos="0 0 0.163">
         <inertial mass="3.7" pos="0 0 0" diaginertia="0.01027 0.01027 0.00666"/>
         <joint name="shoulder_pan_joint_3" class="size3" axis="0 0 1"/>
@@ -61,7 +62,7 @@
                   <joint name="wrist_y2_joint_3" class="size1" axis="0 1 0"/>
                   <geom type="capsule" fromto="0 0 0 0 0.1 0" size="0.03"/>
                   <site name="attachment_site_3" pos="0 0.15 0" quat="-1 1 0 0" size="0.02" rgba="1 0 0 0.5"/>
-                  <camera name="cam_3" pos="0 0 0.2" euler="1.1416 0 0" fovy="60"/>
+                  <!-- <camera name="cam_3" pos="0 0.15 0.1" euler="0.9 0 0" fovy="60"/> -->
                 </body>
               </body>
             </body>

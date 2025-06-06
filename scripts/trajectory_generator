@@ -61,66 +61,112 @@ def run():
         pub = rospy.Publisher(pub_topic_name, setpoint, queue_size=10)
         state_sub = StateSubscriber(agent_ID)
         rate = rospy.Rate(10)
+        
         while not rospy.is_shutdown():  
             time = state_sub.latest_msg.header.stamp.to_sec()
-            if time < 5:          
-                points = [[0.5, 0.5, 0.2],
-                        [0.5, -0.5, 0.2],
-                        [-0.5, -0.5, 0.2],
-                        [-0.5, 0.5, 0.2]]
-                eulers=[[np.pi*3/4, 0, 0],
+
+            if time < 3:    
+                phase_flag = 1      
+                i_points = np.array([[0.9, 0.9, 0.2],
+                        [0.9, -0.9, 0.2],
+                        [-0.9, -0.9, 0.2],
+                        [-0.9, 0.9, 0.2]])
+                i_eulers=np.array([[np.pi*3/4, 0, 0],
                     [np.pi/4, 0, 0],
                     [-np.pi/4, 0, 0],
-                    [-np.pi*3/4, 0, 0]]
+                    [-np.pi*3/4, 0, 0]])
+                
+                f_points = i_points
+                f_eulers = i_eulers
+                i_time = 0
+                f_time = 5
             elif time < 10:
-                # points = [[0.7, 0.0, 0.6],
-                #         [0.0, -0.7, 0.6],
-                #         [-0.7, 0.0, 0.6],
-                #         [0.0, 0.7, 0.6]]
-                points = [[0.9, 0.0, 0.7],
+                if phase_flag == 1:
+                    i_points = f_points
+                    i_eulers = f_eulers
+                    i_time = f_time
+                    phase_flag = 2   
+                f_points = np.array([[0.9, 0.0, 0.7],
                         [0.0, -0.9, 0.7],
                         [-0.9, 0.0, 0.7],
-                        [0.0, 0.9, 0.7]]
-                eulers=[[np.pi/2, np.pi/6, 0],
+                        [0.0, 0.9, 0.7]])
+                f_eulers = np.array([[np.pi/2, np.pi/6, 0],
                     [0, np.pi/6, 0],
                     [-np.pi/2, np.pi/6, 0],
-                    [-np.pi, np.pi/6, 0]]
+                    [-np.pi, np.pi/6, 0]])
+                f_time = 10
             elif time < 20:
-                points = [[0.4, 0.3, 1.0],
+                if phase_flag == 2:
+                    i_points = f_points
+                    i_eulers = f_eulers
+                    i_time = f_time
+                    phase_flag = 3
+                f_points = np.array([[0.4, 0.3, 1.0],
                         [-0.3, -0.4, 1.0],
                         [-0.4, -0.3, 1.0],
-                        [0.3, 0.4, 1.0]]
-                eulers=[[np.pi/2, 0, 0],
+                        [0.3, 0.4, 1.0]])
+                f_eulers = np.array([[np.pi/2, 0, 0],
                     [0, 0, 0],
                     [-np.pi/2, 0, 0],
-                    [-np.pi, 0, 0]]
+                    [-np.pi, 0, 0]])
+                f_time = 20
             elif time < 30:
-                points = [[0.6, 0.1, 1.0],
-                        [-0.1, -0.6, 1.0],
-                        [-0.6, -0.1, 1.0],
-                        [0.1, 0.6, 1.0]]
-                eulers=[[np.pi/2, 0, 0],
-                    [0, 0, 0],
-                    [-np.pi/2, 0, 0],
-                    [-np.pi, 0, 0]]
+                if phase_flag == 3:
+                    i_points = f_points
+                    i_eulers = f_eulers
+                    i_time = f_time
+                    phase_flag = 4
+                # f_points = np.array([[0.6, 0.1, 1.0],
+                #         [-0.1, -0.6, 1.0],
+                #         [-0.6, -0.1, 1.0],
+                #         [0.1, 0.6, 1.0]])
+                # f_eulers = np.array([[np.pi/2, 0, 0],
+                #     [0, 0, 0],
+                #     [-np.pi/2, 0, 0],
+                #     [-np.pi, 0, 0]])
+                f_points = np.array([[0.4, -0.3, 1.2],
+                        [0.3, -0.4, 1.2],
+                        [-0.4, 0.3, 1.2],
+                        [-0.3, 0.4, 1.2]])
+                f_eulers=np.array([[np.pi*3/4, 0, 0],
+                    [np.pi/4, 0, 0],
+                    [-np.pi/4, 0, 0],
+                    [-np.pi*3/4, 0, 0]])
+                f_time = 30
             elif time < 40:
-                points=[[0.2, 0.1, 1.2],
+                if phase_flag == 4:
+                    i_points = f_points
+                    i_eulers = f_eulers
+                    i_time = f_time
+                    phase_flag = 5
+                f_points = np.array([[0.2, 0.1, 1.2],
                         [-0.1, -0.2, 1.2],
                         [-0.2, -0.1, 1.2],
-                        [0.1, 0.2, 1.2]]
-                eulers=[[np.pi/2, 0, 0],
+                        [0.1, 0.2, 1.2]])
+                f_eulers = np.array([[np.pi/2, 0, 0],
                     [0, 0, 0],
                     [-np.pi/2, 0, 0],
-                    [-np.pi, 0, 0]]
+                    [-np.pi, 0, 0]])
+                f_time = 40
             else:
-                points = [[0.9, 0.0, 0.7],
-                        [0.0, -0.9, 0.7],
-                        [-0.9, 0.0, 0.7],
-                        [0.0, 0.9, 0.7]]
-                eulers=[[np.pi/2, np.pi/6, 0],
-                    [0, np.pi/6, 0],
-                    [-np.pi/2, np.pi/6, 0],
-                    [-np.pi, np.pi/6, 0]]
+                if phase_flag == 5:
+                    i_points = f_points
+                    i_eulers = f_eulers
+                    i_time = f_time
+                    phase_flag = 6
+                # f_points = np.array([[0.9, 0.0, 0.7],
+                #         [0.0, -0.9, 0.7],
+                #         [-0.9, 0.0, 0.7],
+                #         [0.0, 0.9, 0.7]])
+                # f_eulers= np.array([[np.pi/2, np.pi/6, 0],
+                #     [0, np.pi/6, 0],
+                #     [-np.pi/2, np.pi/6, 0],
+                #     [-np.pi, np.pi/6, 0]])
+                
+                f_time = 50
+
+            points = (f_points - i_points)*max((time-i_time)/(f_time-i_time), 1) + i_points
+            eulers = (f_eulers - i_eulers)*max((time-i_time)/(f_time-i_time), 1) + i_eulers
 
             msg = in_fixed_pose(points[agent_ID], zyx_euler_to_quat(eulers[agent_ID], in_degree=False))
             

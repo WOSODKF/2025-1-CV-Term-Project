@@ -18,7 +18,8 @@ sim_param_t get_sim_param(YAML::Node node) {
     .g = node["g"].as<double>(),
     .sim_render_rate = node["sim_render_rate"].as<double>(),
     .duration_check = node["duration_check"].as<bool>(),
-    .data_gen_mode = node["data_gen_mode"].as<bool>()};
+    .data_gen_mode = node["data_gen_mode"].as<bool>(),
+    .separate_corr_mesh = node["separate_corr_mesh"].as<bool>()};
 }
 
 view_param_t get_view_param(YAML::Node node) {
@@ -78,7 +79,7 @@ camera_param_t get_camera_param(YAML::Node node) {
   return param;
 }
 Eigen::MatrixXd camera_param_t::compute_P(
-  const Eigen::Vector3d& cam_pos, const Eigen::Matrix3d& cam_rot) {
+  const Eigen::Vector3d& cam_pos, const Eigen::Matrix3d& cam_rot) const {
   Eigen::Matrix4d T_cs;
   T_cs.setIdentity();
   T_cs.topLeftCorner(3, 3) = cam_rot;

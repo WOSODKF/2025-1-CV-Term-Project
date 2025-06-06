@@ -11,10 +11,12 @@
 #include "utils/config.hpp"
 #include "utils/mesh_publisher.hpp"
 
+#include <ros/package.h>
 #include <Eigen/Dense>
 #include <opencv4/opencv2/opencv.hpp>
 #include <vector>
 #include <chrono>
+#include <fstream>
 
 using namespace Eigen;
 
@@ -24,6 +26,7 @@ public:
   void run();
 
 private:
+  bool _separate_corr_mesh;
   int _agent_num;
   int _vertex_num;
   double _g;  // gravity
@@ -38,13 +41,15 @@ private:
   est_mesh_param_t _mesh_param;
   undeformed_mesh_t _undeformed_mesh;
   mesh_data_t _est_mesh;
+  mesh_data_t _corr_mesh;
   mesh_data_t _prev_mesh;
   mesh_data_t _GT_mesh;
   std::vector<Vector3d> _last_vels;  // mesh vertex velocities
 
   std::shared_ptr<ErrorPublisher> _err_pub;
   std::shared_ptr<ParamSubscriber> _param_sub;
-  std::shared_ptr<MeshPublisher> _mesh_pub;
+  std::shared_ptr<MeshPublisher> _est_mesh_pub;
+  std::shared_ptr<MeshPublisher> _corr_mesh_pub;
   std::shared_ptr<InitialMeshSubscriber> _initial_mesh_sub;
   std::vector<std::shared_ptr<MaskSubscriber>> _mask_sub;
   std::vector<std::shared_ptr<MeasurementSubscriber>> _measure_sub;
@@ -53,11 +58,10 @@ private:
   bool _all_mask_ready;
   bool _initial_mesh_ready;
 
-  void update_mesh();
-  void publish_data();
+  std::ofstream _comp_log_file;
 
+  void predict_mesh();
   void correct_mesh();
-  void compute_XPBD();
 
   void measure_receiving_callback(const std::string& frame_id);
   void mask_receiving_callback(const std::string& frame_id);
@@ -78,17 +82,3 @@ void compute_energy_constraint_projection(
   Vector3d& x0, Vector3d& x1, const Vector3d& x0_prev, const Vector3d& x1_prev,
   double& lambda, const double l, const double k, const double m,
   const double gamma);
-
-/* Chamfer distance computation */
-void compute_single_chamfer_step();
-void compute_chamfer_distance_projection();
-// nanoflann_adaptor::NNResult find_nearest_neighbor(const Vector2d& query,
-// const mask_data_t& mask);
-
-struct NNResult {
-  double distance;
-  Vector2d point;
-};
-NNResult find_nearest_neighbor(
-  const Vector2d& query, const mask_data_t& mask, const int height,
-  const int width);

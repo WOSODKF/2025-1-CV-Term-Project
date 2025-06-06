@@ -5,11 +5,12 @@
 #include <Eigen/Dense>
 #include <cmath>
 
-struct sim_param_t{
+struct sim_param_t {
   double g;
   double sim_render_rate;
   bool duration_check;
   bool data_gen_mode;
+  bool separate_corr_mesh;
 };
 
 struct view_param_t {
@@ -17,7 +18,7 @@ struct view_param_t {
   double view_pub_rate;
 };
 
-struct measure_param_t{
+struct measure_param_t {
   bool measure_on;
   double measure_pub_rate;
   double measure_start_time;
@@ -44,23 +45,24 @@ struct robot_param_t {
   double l5E;
 };
 
-struct robot_IK_param_t{
+struct robot_IK_param_t {
   double lambda;
   double Kw;
   double Kp;
 };
 
-struct camera_param_t{
+struct camera_param_t {
   int fovy;
   int width;
   int height;
   double focal_pixel;
   Eigen::Matrix3d K;
 
-  Eigen::MatrixXd compute_P(const Eigen::Vector3d& cam_pos, const Eigen::Matrix3d& cam_rot);
+  Eigen::MatrixXd compute_P(
+    const Eigen::Vector3d& cam_pos, const Eigen::Matrix3d& cam_rot) const;
 };
 
-struct XPBD_param_t{
+struct XPBD_param_t {
   int max_iter;
   int correction_iter;
   bool visual_correction_on;

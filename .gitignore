@@ -6,6 +6,7 @@ compile_commands.json
 *.png
 *.jpg
 *.pyc
+*.asv
 image_processing_test
 training_data
 yolo_model/images

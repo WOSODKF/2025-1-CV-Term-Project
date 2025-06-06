@@ -16,6 +16,9 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from utils.math_utils import *
 
+TO_ORIGINAL = False
+TO_MASK = True
+
 def get_camera_p(cam_K, measurement_msg:robotMeasurement):
     cam_pos = np.array([measurement_msg.cam_pos.x, measurement_msg.cam_pos.y, measurement_msg.cam_pos.z])
     cam_quat = np.array([measurement_msg.cam_quat.w, measurement_msg.cam_quat.x, measurement_msg.cam_quat.y, measurement_msg.cam_quat.z])
@@ -64,6 +67,17 @@ class ViewSubscriber:
     def callback(self, msg:Image):
         self.last_msg = msg
 
+class MaskSubscriber:
+    def __init__(self, mask_id):
+        self.mask_sub = rospy.Subscriber("/segmentor/seg_vis_"+str(mask_id), Image, self.callback)
+        self.last_msg = Image()
+        self.last_msg.encoding = "mono8"
+        self.ready = False
+    
+    def callback(self, msg:Image):
+        self.last_msg = msg
+        self.ready = True
+
 class MeshVisualizer:
     def __init__(self):
         rospy.init_node("mesh_visualizer_rviz")
@@ -71,22 +85,38 @@ class MeshVisualizer:
         self.gt_marker_pub = rospy.Publisher("/GT_mesh_marker", Marker, queue_size=1)
         self.frame_id = rospy.get_param("~frame_id", "world")
 
-        self.est_sub =rospy.Subscriber("/mesh_estimator/mesh_estimated", mesh, self.est_callback)
+        self.est_sub = rospy.Subscriber("/mesh_estimator/mesh_estimated", mesh, self.est_callback)
         self.est_marker_pub = rospy.Publisher("/Est_mesh_marker", Marker, queue_size=1)
         self.frame_id = rospy.get_param("~frame_id", "world")
 
         # for projection test
+        self.agent_num = rospy.get_param("~agent_num")
         config_dir = rospy.get_param("~param")
         self.cam_param = CameraParameters(config_dir)
-        vis_id = 2
-        self.meas_sub = MeasurementSubscriber(vis_id)
-        self.view_sub = ViewSubscriber(vis_id)
-        self.gt_proj_pub = rospy.Publisher("/GT_mesh_cam_projection", Image, queue_size=1)
-        self.est_proj_pub = rospy.Publisher("/est_mesh_cam_projection", Image, queue_size=1)
+        self.meas_sub = []
+        self.view_sub = []
+        self.mask_sub = []
+        self.gt_proj_pub = []
+        self.est_proj_pub = []
+        for vis_id in range(self.agent_num):
+            self.meas_sub.append(MeasurementSubscriber(vis_id))
+            self.view_sub.append(ViewSubscriber(vis_id))
+            self.mask_sub.append(MaskSubscriber(vis_id))
+            self.gt_proj_pub.append(rospy.Publisher("/GT_mesh_cam_projection_"+str(vis_id), Image, queue_size=1))
+            self.est_proj_pub.append(rospy.Publisher("/est_mesh_cam_projection_"+str(vis_id), Image, queue_size=1))
         self.bridge = CvBridge()
-        self.project_onto_original = True
+        self.project_onto_original = TO_ORIGINAL
+        self.project_onto_mask = TO_MASK
+        
+        # for correction test(see mesh_estimator->_corr_mesh)
+        with open(config_dir, 'r') as file:
+            config = yaml.safe_load(file)
+        if config["sim"]["separate_corr_mesh"]:
+            self.corr_sub = rospy.Subscriber("/mesh_estimator/mesh_corrected", mesh, self.corr_callback)
+            self.corr_marker_pub = rospy.Publisher("Corr_mesh_marker", Marker, queue_size=1)
+            
 
-    def generate_markers(self, msg:mesh, is_estimate):
+    def generate_markers(self, msg:mesh, is_estimate=False, is_corr=False):
         rows, cols = msg.rows, msg.cols
         if len(msg.positions) != rows * cols:
             rospy.logwarn("Mesh size mismatch")
@@ -110,6 +140,11 @@ class MeshVisualizer:
             marker.color.r = 0.8
             marker.color.g = 0.2
             marker.color.b = 1.0
+            marker.color.a = 1.0
+        elif is_corr:
+            marker.color.r = 0.8
+            marker.color.g = 0.4
+            marker.color.b = 0.2
             marker.color.a = 1.0
         else:
             marker.color.r = 0.2
@@ -137,11 +172,12 @@ class MeshVisualizer:
 
         return marker
 
-    def project_points_to_cam(self, msg:mesh, to_original):
+    def project_points_to_cam(self, msg:mesh, vis_id, to_original=False, to_mask=False):
         # construct camera matrix
         proj_msg = Image()
-        view_msg = self.view_sub.last_msg
-        measurement_msg = self.meas_sub.last_msg
+        view_msg = self.view_sub[vis_id].last_msg
+        mask_msg = self.mask_sub[vis_id].last_msg
+        measurement_msg = self.meas_sub[vis_id].last_msg
 
         if view_msg.header.stamp.to_sec() == 0:
             return Image()
@@ -153,6 +189,11 @@ class MeshVisualizer:
         cam_P = get_camera_p(self.cam_param.cam_K, measurement_msg)
         if to_original:
             projection = self.bridge.imgmsg_to_cv2(view_msg).copy()
+            color = (0, 255, 255)
+            encoding = "bgr8"
+        elif to_mask:
+            gray_mask = self.bridge.imgmsg_to_cv2(mask_msg, "mono8").copy()  # mono8 image
+            projection = cv2.cvtColor(gray_mask, cv2.COLOR_GRAY2BGR)  # convert to bgr8
             color = (0, 255, 255)
             encoding = "bgr8"
         else:
@@ -176,7 +217,7 @@ class MeshVisualizer:
                 continue
 
             cv2.circle(projection, (col, row), 5, color, -1)
-
+            
         proj_msg = self.bridge.cv2_to_imgmsg(projection, encoding)
         return proj_msg
 
@@ -187,16 +228,27 @@ class MeshVisualizer:
         self.gt_marker_pub.publish(marker)
 
         # project points to camera and publish
-        projection = self.project_points_to_cam(msg, self.project_onto_original)
-        self.gt_proj_pub.publish(projection)
+        for vis_id in range(self.agent_num):
+            if self.project_onto_mask and not self.mask_sub[vis_id].ready:
+                continue
+            projection = self.project_points_to_cam(msg, vis_id, self.project_onto_original, self.project_onto_mask)
+            self.gt_proj_pub[vis_id].publish(projection)
 
     def est_callback(self, msg:mesh):
         # print(msg.positions)
         marker = self.generate_markers(msg, is_estimate=True)
         self.est_marker_pub.publish(marker)
 
-        projection = self.project_points_to_cam(msg, self.project_onto_original)
-        self.est_proj_pub.publish(projection)
+        for vis_id in range(self.agent_num):
+            if self.project_onto_mask and not self.mask_sub[vis_id].ready:
+                continue
+            projection = self.project_points_to_cam(msg, vis_id, self.project_onto_original, self.project_onto_mask)
+            self.est_proj_pub[vis_id].publish(projection)
+
+    def corr_callback(self, msg:mesh):
+        # print(msg.positions)
+        marker = self.generate_markers(msg, is_corr=True)
+        self.corr_marker_pub.publish(marker)
 
     def run(self):
         rospy.spin()

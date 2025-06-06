@@ -22,6 +22,7 @@
   <node name="mesh_visualizer" pkg="$(arg package)" type="mesh_visualizer" output="$(arg output)">
     <param name="param" value="$(arg param)"/>
     <param name="frame_id" value="world"/>
+    <param name="agent_num" value="4"/>
   </node>
   <group ns="robot_0">
     <node name="trajectory_generator" pkg="$(arg package)" type="trajectory_generator" output="screen">

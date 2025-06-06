@@ -15,6 +15,8 @@ from cv_bridge import CvBridge
 from ultralytics import YOLO
 import cv2
 import torch
+import time
+import csv
 
 # Image segementation node - by YOLOv8
     
@@ -42,7 +44,11 @@ class ImageSegmentor:
             self.mask_pub.append(MaskPublisher(i))
         
         # for test
-        self.seg_vis_pub = rospy.Publisher("~seg_vis", Image, queue_size=3)
+        self.seg_vis_pub = []
+        for i in range(agent_num):
+            pub_i = rospy.Publisher("~seg_vis_"+str(i), Image, queue_size=3)
+            self.seg_vis_pub.append(pub_i)
+        self.init_logger(agent_num)
         
     def mask_to_msg(self, binary_mask: np.ndarray, header=None, encoding="mono8") -> clothMask:
         msg = clothMask()
@@ -64,7 +70,11 @@ class ImageSegmentor:
     def segment_image(self, image_msg:Image, agent_ID):   # called by the callback of ViewSubscribers
         # segment image
         img = self.bridge.imgmsg_to_cv2(image_msg) # BGR image
-        results = self.model(img, verbose=True)[0]
+        start_time = time.time()
+        results = self.model(img, verbose=False)[0]
+        end_time = time.time()
+        duration = (end_time - start_time) * 1000 # [ms]
+        # print(f"inference: {duration:.2f} ms")
         if results.masks is not None and results.masks.data is not None:
             data = np.any(results.masks.data.cpu().numpy(), axis=0).astype(np.uint8)
         else:
@@ -77,10 +87,29 @@ class ImageSegmentor:
     
         # publish data 
         self.mask_pub[agent_ID].pub()
+        
+        # save inference time log
+        self.log_inference_time_csv(agent_ID, image_msg.header.stamp.to_sec(), duration)
     
         # segmentation test
-        if agent_ID == 0:
-            self.seg_vis_pub.publish(self.bridge.cv2_to_imgmsg(255 * data, encoding="mono8"))
+        self.seg_vis_pub[agent_ID].publish(self.bridge.cv2_to_imgmsg(255 * data, encoding="mono8"))
+        
+    def log_inference_time_csv(self, agent_ID, timestamp, inference_time):        
+        with open(self.log_path[agent_ID], mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([timestamp, inference_time])
+            
+    def init_logger(self, agent_num):
+        log_dir = os.path.join(script_dir, "../logs")
+        os.makedirs(log_dir, exist_ok=True)
+        self.log_path = []
+        for id in range(agent_num):
+            self.log_path.append(os.path.join(log_dir, f"yolo_inference_time_{id}.csv"))
+            with open(self.log_path[id], mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(["timestamp", "inference_time"])
+            
+                
         
 class ViewSubscriber:
     def __init__(self, agent_ID, parent_segmentor:ImageSegmentor=None):
@@ -101,7 +130,6 @@ class MaskPublisher:
         self.agent_ID = agent_ID
         self.topic_name = "~cloth_mask_" + str(agent_ID)
         self.publisher = rospy.Publisher(self.topic_name, clothMask, queue_size=5)
-        pass
     
     def update_msg(self, msg:clothMask):
         self.last_msg = msg

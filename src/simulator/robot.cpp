@@ -40,6 +40,11 @@ void Robot::compute_control(const mjModel* m, const mjData* d) {
     d, _mj_ID._first_qpos_ID, _mj_ID._grasp_site_ID, _mj_ID._cam_ID);
 
   // compute control
+  if (d->time < 1.0) {
+    _last_control.reset();
+    return;
+  }
+  
   auto dt = m->opt.timestep;
   _last_control = inverse_kinematics(_setpoint_sub->setpoint(), dt);
 }

@@ -3,6 +3,7 @@ sim:
   sim_render_rate: 60.0
   duration_check: false
   data_gen_mode: false
+  separate_corr_mesh: false
 
 view:
   render_view: true
@@ -20,8 +21,8 @@ mesh:
   cols: 9
   spacing: 0.2  # keep consistent with rows and cols
   m_0: 1.0    # initial guess of total mass(kg)
-  k_0: 2e5    # initial guess of stiffness coefficient(N/m)
-  beta_0: 10.0  # initial guess of damping coefficient
+  k_0: 2e5  # initial guess of stiffness coefficient(N/m)
+  beta_0: 2.0  # initial guess of damping coefficient
   # m_0: 10.0     # initial guess of total mass(kg)
   # k_0: 2e10     # initial guess of stiffness coefficient(N/m)
   # beta_0: 1000.0   # initial guess of damping coefficient
@@ -36,9 +37,9 @@ robot:
   l5E: 0.15
 
 IK:
-  lambda: 2.0
+  lambda: 3.0
   Kw: 1.0
-  Kp: 3.0
+  Kp: 2.0
 
 camera:
   fovy: 60  
@@ -51,5 +52,5 @@ XPBD:
   visual_correction_on: true
   correction_iter: 20
   conv_crit: 1e-3 #not in use (0602)
-  alpha_chamfer: 1e2
-  beta_chamfer: 1e2
+  alpha_chamfer: 5.0
+  beta_chamfer: 1.0
