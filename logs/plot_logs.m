@@ -5,18 +5,18 @@ inf_time_1 = readtable('yolo_inference_time_1.csv');
 inf_time_2 = readtable('yolo_inference_time_2.csv');
 inf_time_3 = readtable('yolo_inference_time_3.csv');
 comp_time = readtable('mesh_timing_log.csv');
-% 
-% figure;
-% plot(inf_time_0.timestamp(2:end), inf_time_0.inference_time(2:end));
-% 
-% figure;
-% plot(inf_time_1.timestamp(2:end), inf_time_1.inference_time(2:end));
-% 
-% figure;
-% plot(inf_time_2.timestamp(2:end), inf_time_2.inference_time(2:end));
-% 
-% figure;
-% plot(inf_time_3.timestamp(2:end), inf_time_3.inference_time(2:end));
+
+figure;
+plot(inf_time_0.timestamp(2:end), inf_time_0.inference_time(2:end));
+
+figure;
+plot(inf_time_1.timestamp(2:end), inf_time_1.inference_time(2:end));
+
+figure;
+plot(inf_time_2.timestamp(2:end), inf_time_2.inference_time(2:end));
+
+figure;
+plot(inf_time_3.timestamp(2:end), inf_time_3.inference_time(2:end));
 
 figure;
 corr_timestamp = [];

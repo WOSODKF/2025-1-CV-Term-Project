@@ -37,7 +37,8 @@ class Simulator {
     std::shared_ptr<config_t> _config;
     std::vector<std::shared_ptr<Robot>> _robot;
     std::shared_ptr<MeshPublisher> _mesh_pub;
-    ros::Subscriber _segmentor_init_sub;
+    // ros::Subscriber _segmentor_init_sub;
+    std::vector<ros::Subscriber> _segmentor_init_sub;
 
     mesh_data_t _mesh;
 

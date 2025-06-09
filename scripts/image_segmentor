@@ -24,31 +24,24 @@ class ImageSegmentor:
     def __init__(self):
         self.bridge = CvBridge()
         rospy.init_node("segmentor")
-        agent_num = rospy.get_param("~agent_num")
+        agent_id = rospy.get_param("~agent_id")
         model_dir = rospy.get_param("~model_dir")
-        self.init_segmentor_by_params(agent_num, model_dir)
+        self.init_segmentor_by_params(agent_id, model_dir)
         init_pub = rospy.Publisher("~initialized", Bool, queue_size=2, latch=True)
         init_pub.publish(data=True)
         
-    def init_segmentor_by_params(self, agent_num, model_dir):
+    def init_segmentor_by_params(self, agent_id, model_dir):
         self.model:YOLO = YOLO(model_dir)
         if(torch.cuda.is_available()):
             self.model.to("cuda")
             print("YOLO model set to cuda")
-        self.agent_num = agent_num
-        self.img_sub = []
-        self.mask_pub = []
-        
-        for i in range(agent_num):
-            self.img_sub.append(ViewSubscriber(i, self))
-            self.mask_pub.append(MaskPublisher(i))
-        
+        self.agent_id = agent_id
+        self.img_sub = ViewSubscriber(agent_id, self)
+        self.mask_pub = MaskPublisher(agent_id)
+
         # for test
-        self.seg_vis_pub = []
-        for i in range(agent_num):
-            pub_i = rospy.Publisher("~seg_vis_"+str(i), Image, queue_size=3)
-            self.seg_vis_pub.append(pub_i)
-        self.init_logger(agent_num)
+        self.seg_vis_pub = rospy.Publisher("~seg_vis", Image, queue_size=3)
+        self.init_logger(agent_id)
         
     def mask_to_msg(self, binary_mask: np.ndarray, header=None, encoding="mono8") -> clothMask:
         msg = clothMask()
@@ -83,31 +76,32 @@ class ImageSegmentor:
             
         # store result to publisher
         msg = self.mask_to_msg(data, image_msg.header)
-        self.mask_pub[agent_ID].update_msg(msg)
+        self.mask_pub.update_msg(msg)
+        # self.mask_pub[agent_ID].update_msg(msg)
     
         # publish data 
-        self.mask_pub[agent_ID].pub()
+        self.mask_pub.pub()
+        # self.mask_pub[agent_ID].pub()
         
         # save inference time log
-        self.log_inference_time_csv(agent_ID, image_msg.header.stamp.to_sec(), duration)
+        self.log_inference_time_csv(image_msg.header.stamp.to_sec(), duration)
     
         # segmentation test
-        self.seg_vis_pub[agent_ID].publish(self.bridge.cv2_to_imgmsg(255 * data, encoding="mono8"))
+        self.seg_vis_pub.publish(self.bridge.cv2_to_imgmsg(255 * data, encoding="mono8"))
+        # self.seg_vis_pub[agent_ID].publish(self.bridge.cv2_to_imgmsg(255 * data, encoding="mono8"))
         
-    def log_inference_time_csv(self, agent_ID, timestamp, inference_time):        
-        with open(self.log_path[agent_ID], mode='a', newline='') as file:
+    def log_inference_time_csv(self, timestamp, inference_time):        
+        with open(self.log_path, mode='a', newline='') as file:
             writer = csv.writer(file)
             writer.writerow([timestamp, inference_time])
             
-    def init_logger(self, agent_num):
+    def init_logger(self, agent_id):
         log_dir = os.path.join(script_dir, "../logs")
         os.makedirs(log_dir, exist_ok=True)
-        self.log_path = []
-        for id in range(agent_num):
-            self.log_path.append(os.path.join(log_dir, f"yolo_inference_time_{id}.csv"))
-            with open(self.log_path[id], mode='w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(["timestamp", "inference_time"])
+        self.log_path = os.path.join(log_dir, f"yolo_inference_time_{agent_id}.csv")
+        with open(self.log_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["timestamp", "inference_time"])
             
                 
         
@@ -116,7 +110,7 @@ class ViewSubscriber:
         self.last_msg = Image()
         self.parent = parent_segmentor  # assign member
         self.agent_ID = agent_ID
-        self.sub_topic_name = "simulator/view_" + str(agent_ID)
+        self.sub_topic_name = "/simulator/view_" + str(agent_ID)
         self.subscriber = rospy.Subscriber(self.sub_topic_name, Image, self.callback)
         
     def callback(self, msg):
@@ -128,7 +122,7 @@ class MaskPublisher:
     def __init__(self, agent_ID):
         self.last_msg = clothMask()
         self.agent_ID = agent_ID
-        self.topic_name = "~cloth_mask_" + str(agent_ID)
+        self.topic_name = "~cloth_mask"
         self.publisher = rospy.Publisher(self.topic_name, clothMask, queue_size=5)
     
     def update_msg(self, msg:clothMask):

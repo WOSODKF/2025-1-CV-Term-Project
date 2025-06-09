@@ -24,7 +24,8 @@ mjvCamera _robot_camera;
 mjrRect _robot_viewport;
 
 // segmentor init
-bool segmentor_inited = false;
+std::vector<bool> segmentor_inited;
+bool all_segmentor_inited = false;
 
 // mesh init
 bool init_mesh_sent = false;
@@ -181,9 +182,26 @@ Simulator::Simulator(std::shared_ptr<config_t> config): _config(config) {
   _mesh.init(first_body_id, _config->mesh.rows, _config->mesh.cols);
   _mesh_pub = make_mesh_publisher(node, "GT", _mesh);
 
-  _segmentor_init_sub = node.subscribe<std_msgs::Bool>(
-    "/segmentor/initialized", 2,
-    [&](const std_msgs::Bool::ConstPtr& msg) { segmentor_inited = msg->data; });
+  _segmentor_init_sub = std::vector<ros::Subscriber>(_agent_num);
+  segmentor_inited = std::vector<bool>(_agent_num);
+  for (int i = 0; i < _agent_num; i++) {
+    int idx = i;
+    int num = _agent_num;
+    segmentor_inited[i] = false;
+    _segmentor_init_sub[i] = node.subscribe<std_msgs::Bool>(
+      "/robot_" + std::to_string(i) + "/segmentor/initialized", 2,
+      [&, idx, num](const std_msgs::Bool::ConstPtr& msg) {
+        segmentor_inited[idx] = msg->data;
+        std::cout << "init message received (idx:" << idx << std::endl;
+        all_segmentor_inited = segmentor_inited[0];
+        for (int k = 1; k < num; k++) {
+          all_segmentor_inited = all_segmentor_inited && segmentor_inited[k];
+        }
+        if (all_segmentor_inited){
+          std::cout << "segmentor inited" << std::endl;
+        }
+      });
+  }
 
   // callback registration
   register_callback();
@@ -220,9 +238,9 @@ void Simulator::run() {
 
     // get mesh data & publish
     bool init_mesh = !init_mesh_sent &&
-      _data->time > _config->mesh.mesh_init_time && segmentor_inited;
+      _data->time > _config->mesh.mesh_init_time && all_segmentor_inited;
 
-    if (init_mesh || (_config->mesh.GT_mesh && segmentor_inited)) {
+    if (init_mesh || (_config->mesh.GT_mesh && all_segmentor_inited)) {
       _mesh.update_by_mj(_model, _data);
       _mesh_pub->update(_mesh, init_mesh);
       _mesh_pub->pub();
@@ -231,7 +249,7 @@ void Simulator::run() {
 
     // update view & publish
     bool render_view = _config->view.render_view && _run &&
-      _data->time > _config->measure.measure_start_time && segmentor_inited;
+      _data->time > _config->measure.measure_start_time && all_segmentor_inited;
 
     if (
       render_view &&
@@ -249,7 +267,7 @@ void Simulator::run() {
 
     // update measurement & publish
     bool measure_on = _config->measure.measure_on && _run &&
-      _data->time > _config->measure.measure_start_time && segmentor_inited;
+      _data->time > _config->measure.measure_start_time && all_segmentor_inited;
 
     if (
       measure_on &&

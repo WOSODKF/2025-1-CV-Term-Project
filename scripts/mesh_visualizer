@@ -69,7 +69,7 @@ class ViewSubscriber:
 
 class MaskSubscriber:
     def __init__(self, mask_id):
-        self.mask_sub = rospy.Subscriber("/segmentor/seg_vis_"+str(mask_id), Image, self.callback)
+        self.mask_sub = rospy.Subscriber("/robot_"+str(mask_id)+"/segmentor/seg_vis", Image, self.callback)
         self.last_msg = Image()
         self.last_msg.encoding = "mono8"
         self.ready = False

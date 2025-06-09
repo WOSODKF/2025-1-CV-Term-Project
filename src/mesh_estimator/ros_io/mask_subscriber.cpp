@@ -3,7 +3,9 @@
 MaskSubscriber::MaskSubscriber(
   ros::NodeHandle& node, std::shared_ptr<config_t> config, int agent_ID)
     : _agent_ID(agent_ID) {
-  std::string topic_name = "/segmentor/cloth_mask_" + std::to_string(agent_ID);
+  // std::string topic_name = "/segmentor/cloth_mask_" + std::to_string(agent_ID);
+  std::string topic_name =
+    "/robot_" + std::to_string(agent_ID) + "/segmentor/cloth_mask";
   _sub = node.subscribe(topic_name, 3, &MaskSubscriber::callback, this);
 
   _last_mask_data.init(config);

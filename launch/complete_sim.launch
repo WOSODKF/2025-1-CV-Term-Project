@@ -9,11 +9,11 @@
     <param name="xml_file" value="$(arg xml_file)"/>
     <param name="param" value="$(arg param)"/>
   </node>
-  <node name="segmentor" pkg="$(arg package)" type="image_segmentor" output="$(arg output)">
+  <!-- <node name="segmentor" pkg="$(arg package)" type="image_segmentor" output="$(arg output)">
     <param name="param" value="$(arg param)"/>
     <param name="agent_num" value="4"/>
     <param name="model_dir" value="$(arg model)"/>
-  </node>
+  </node> -->
 
   <!-- <node name="param_estimator" pkg="$(arg package)" type="param_estimator" output="$(arg output)">
     <param name="param" value="$(arg param)"/>
@@ -29,11 +29,21 @@
       <param name="agent_id" value="0"/>
       <param name="param" value="$(arg param)"/>
     </node>
+    <node name="segmentor" pkg="$(arg package)" type="image_segmentor" output="$(arg output)">
+      <param name="param" value="$(arg param)"/>
+      <param name="agent_id" value="0"/>
+      <param name="model_dir" value="$(arg model)"/>
+    </node>
   </group>
   <group ns="robot_1">
     <node name="trajectory_generator" pkg="$(arg package)" type="trajectory_generator" output="screen">
       <param name="agent_id" value="1"/>
       <param name="param" value="$(arg param)"/>
+    </node>
+    <node name="segmentor" pkg="$(arg package)" type="image_segmentor" output="$(arg output)">
+      <param name="param" value="$(arg param)"/>
+      <param name="agent_id" value="1"/>
+      <param name="model_dir" value="$(arg model)"/>
     </node>
   </group>
   <group ns="robot_2">
@@ -41,11 +51,21 @@
       <param name="agent_id" value="2"/>
       <param name="param" value="$(arg param)"/>
     </node>
+    <node name="segmentor" pkg="$(arg package)" type="image_segmentor" output="$(arg output)">
+      <param name="param" value="$(arg param)"/>
+      <param name="agent_id" value="2"/>
+      <param name="model_dir" value="$(arg model)"/>
+    </node>
   </group>
   <group ns="robot_3">
     <node name="trajectory_generator" pkg="$(arg package)" type="trajectory_generator" output="screen">
       <param name="agent_id" value="3"/>
       <param name="param" value="$(arg param)"/>
+    </node>
+    <node name="segmentor" pkg="$(arg package)" type="image_segmentor" output="$(arg output)">
+      <param name="param" value="$(arg param)"/>
+      <param name="agent_id" value="3"/>
+      <param name="model_dir" value="$(arg model)"/>
     </node>
   </group>
   <node name="mesh_estimator" pkg="$(arg package)" type="mesh_estimator" output="$(arg output)">
