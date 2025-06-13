@@ -15,6 +15,8 @@ from visualization_msgs.msg import Marker
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from utils.math_utils import *
+import csv
+# from scipy import ndimage
 
 TO_ORIGINAL = False
 TO_MASK = True
@@ -68,24 +70,99 @@ class ViewSubscriber:
         self.last_msg = msg
 
 class MaskSubscriber:
-    def __init__(self, mask_id):
+    def __init__(self, mask_id, do_dist_transform=False):
         self.mask_sub = rospy.Subscriber("/robot_"+str(mask_id)+"/segmentor/seg_vis", Image, self.callback)
         self.last_msg = Image()
         self.last_msg.encoding = "mono8"
         self.ready = False
+        # distance transform visualizer
+        self.do_dist_transform = do_dist_transform
+        self.dist_transform = Image()
+        self.dist_transform.encoding = None
+        self.bridge = CvBridge()
+        self.dist_pub = rospy.Publisher("/dist_transform_"+str(mask_id), Image, queue_size=1)
     
     def callback(self, msg:Image):
         self.last_msg = msg
         self.ready = True
+        if self.do_dist_transform:
+            try:
+                # Convert ROS Image to mono8 OpenCV image
+                cv_mask = self.bridge.imgmsg_to_cv2(msg, desired_encoding="mono8")
+
+                # Ensure binary mask (just in case)
+                _, cv_mask = cv2.threshold(cv_mask, 127, 255, cv2.THRESH_BINARY)
+
+                # Perform distance transform (float32 result)
+                cv_mask = cv2.bitwise_not(cv_mask)
+                dist = cv2.distanceTransform(cv_mask, distanceType=cv2.DIST_L2, maskSize=5)
+
+                # Normalize to 0-255 (ensure min and max are different to avoid division by zero)
+                min_val, max_val, _, _ = cv2.minMaxLoc(dist)
+                if max_val - min_val > 1e-5:
+                    dist_norm = cv2.normalize(dist, None, 0, 255, cv2.NORM_MINMAX)
+                else:
+                    dist_norm = np.zeros_like(dist)
+
+                # Convert to 8-bit image
+                dist_uint8 = dist_norm.astype(np.uint8)
+
+                # Convert to ROS message (mono8)
+                self.dist_transform = self.bridge.cv2_to_imgmsg(dist_uint8, encoding="mono8")
+                self.dist_transform.header = msg.header
+                
+                self.dist_pub.publish(self.dist_transform)
+
+            except Exception as e:
+                rospy.logerr(f"Distance transform (mono8) failed: {e}")
+#         if self.do_dist_transform:
+#             try:
+#                 # Convert to OpenCV mono8 format
+#                 cv_mask = self.bridge.imgmsg_to_cv2(msg, desired_encoding="mono8")
+#                 binary_mask = (cv_mask > 127).astype(np.uint8)  # Ensure binary 0/1
+#                 self.cv_mask = binary_mask.copy()
+# 
+#                 # Invert to get background mask
+#                 inverted = 1 - binary_mask
+# 
+#                 # Compute distance and nearest indices
+#                 dist, indices = ndimage.distance_transform_edt(
+#                     inverted, return_indices=True)
+# 
+#                 self.indices = indices  # (2, H, W)
+# 
+#                 # Normalize distance map for color visualization
+#                 dist_norm = cv2.normalize(dist, None, 0, 255, cv2.NORM_MINMAX)
+#                 dist_uint8 = dist_norm.astype(np.uint8)
+#                 dist_color = cv2.applyColorMap(dist_uint8, cv2.COLORMAP_JET)
+# 
+#                 # Query a test pixel
+#                 query_pixel = (100, 150)  # row, col
+#                 if binary_mask[query_pixel] == 0:
+#                     nearest_y = indices[0][query_pixel]
+#                     nearest_x = indices[1][query_pixel]
+#                     # Red = query, Green = nearest
+#                     cv2.circle(dist_color, (query_pixel[1], query_pixel[0]), 3, (0, 0, 255), -1)
+#                     cv2.circle(dist_color, (nearest_x, nearest_y), 3, (0, 255, 0), -1)
+# 
+#                 # Publish colored distance map
+#                 self.dist_transform = self.bridge.cv2_to_imgmsg(dist_color, encoding="rgb8")
+#                 self.dist_transform.header = msg.header
+#                 self.dist_pub.publish(self.dist_transform)
+# 
+#             except Exception as e:
+#                 rospy.logerr(f"Distance transform or nearest point failed: {e}")
 
 class MeshVisualizer:
     def __init__(self):
         rospy.init_node("mesh_visualizer_rviz")
         self.gt_sub = rospy.Subscriber("/simulator/mesh_GT", mesh, self.gt_callback)
+        self.gt_mesh = mesh()
         self.gt_marker_pub = rospy.Publisher("/GT_mesh_marker", Marker, queue_size=1)
         self.frame_id = rospy.get_param("~frame_id", "world")
 
         self.est_sub = rospy.Subscriber("/mesh_estimator/mesh_estimated", mesh, self.est_callback)
+        self.est_mesh = mesh()
         self.est_marker_pub = rospy.Publisher("/Est_mesh_marker", Marker, queue_size=1)
         self.frame_id = rospy.get_param("~frame_id", "world")
 
@@ -98,10 +175,14 @@ class MeshVisualizer:
         self.mask_sub = []
         self.gt_proj_pub = []
         self.est_proj_pub = []
+        
+        self.do_dist_trans = True
+        self.compute_error = False
+        
         for vis_id in range(self.agent_num):
             self.meas_sub.append(MeasurementSubscriber(vis_id))
             self.view_sub.append(ViewSubscriber(vis_id))
-            self.mask_sub.append(MaskSubscriber(vis_id))
+            self.mask_sub.append(MaskSubscriber(vis_id, do_dist_transform=self.do_dist_trans))
             self.gt_proj_pub.append(rospy.Publisher("/GT_mesh_cam_projection_"+str(vis_id), Image, queue_size=1))
             self.est_proj_pub.append(rospy.Publisher("/est_mesh_cam_projection_"+str(vis_id), Image, queue_size=1))
         self.bridge = CvBridge()
@@ -115,6 +196,8 @@ class MeshVisualizer:
             self.corr_sub = rospy.Subscriber("/mesh_estimator/mesh_corrected", mesh, self.corr_callback)
             self.corr_marker_pub = rospy.Publisher("Corr_mesh_marker", Marker, queue_size=1)
             
+        if self.compute_error:
+            self.init_logger()
 
     def generate_markers(self, msg:mesh, is_estimate=False, is_corr=False):
         rows, cols = msg.rows, msg.cols
@@ -224,6 +307,7 @@ class MeshVisualizer:
 
     def gt_callback(self, msg:mesh):
         # generate marker and publish
+        self.gt_mesh = msg
         marker = self.generate_markers(msg, is_estimate=False)
         self.gt_marker_pub.publish(marker)
 
@@ -236,6 +320,7 @@ class MeshVisualizer:
 
     def est_callback(self, msg:mesh):
         # print(msg.positions)
+        self.est_mesh = msg
         marker = self.generate_markers(msg, is_estimate=True)
         self.est_marker_pub.publish(marker)
 
@@ -244,11 +329,48 @@ class MeshVisualizer:
                 continue
             projection = self.project_points_to_cam(msg, vis_id, self.project_onto_original, self.project_onto_mask)
             self.est_proj_pub[vis_id].publish(projection)
+        
+        if self.compute_error:
+            rmse = self.compute_RMSE()
+            if rmse is not None:
+                self.log_RMSE_csv(msg.header.stamp.to_sec(), rmse)
+            
 
     def corr_callback(self, msg:mesh):
         # print(msg.positions)
         marker = self.generate_markers(msg, is_corr=True)
         self.corr_marker_pub.publish(marker)
+        
+    def compute_RMSE(self):
+        if (self.gt_mesh.header.stamp - self.est_mesh.header.stamp).to_sec() > 1e-2:
+            print(f"mesh time mismatch - gt:{self.gt_mesh.header.stamp.to_sec()}, est:{self.est_mesh.header.stamp.to_sec()}")
+            return None
+        else:
+            print("mesh time matched")
+            
+        n = self.gt_mesh.rows * self.gt_mesh.cols
+        se = 0
+        for i in range(n):
+            pos_gt = self.gt_mesh.positions[i]
+            pos_gt_np = np.array([pos_gt.x, pos_gt.y, pos_gt.z])
+            pos_est = self.est_mesh.positions[i]
+            pos_est_np = np.array([pos_est.x, pos_est.y, pos_est.z])
+            se += np.sum((pos_gt_np - pos_est_np)**2)
+            
+        return np.sqrt(se/n)
+
+    def log_RMSE_csv(self, timestamp, RMSE):        
+        with open(self.log_path, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow([timestamp, RMSE])
+            
+    def init_logger(self):
+        log_dir = os.path.join(script_dir, "../logs")
+        os.makedirs(log_dir, exist_ok=True)
+        self.log_path = os.path.join(log_dir, f"mesh_estimation_error.csv")
+        with open(self.log_path, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(["timestamp", "RMSE"])
 
     def run(self):
         rospy.spin()

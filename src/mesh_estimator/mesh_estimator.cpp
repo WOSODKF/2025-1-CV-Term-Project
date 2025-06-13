@@ -78,6 +78,11 @@ MeshEstimator::MeshEstimator(
   } else {
     _comp_log_file << "timestamp,correction_time_ms,prediction_time_ms\n";
   }
+
+  /*test*/
+  // _dist_pub = node.advertise<sensor_msgs::Image>("/dist_transform_vis_0", 1);
+  /**/
+
   /* TODO: assign callback to measurement subscriber? (event-based running &
    * only ros::spin() in main fn.)*/
 }
@@ -155,6 +160,14 @@ void MeshEstimator::measure_receiving_callback(const std::string& frame_id) {
     }
     /*----*/
 
+    // /* frequency check */
+    // auto now = std::chrono::system_clock::now();
+    // std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+    // auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+    //   now.time_since_epoch());
+    // std::cout << "pred call: " << ms.count() << std::endl;
+    // /**/
+
     auto mesh_pred_start = std::chrono::steady_clock::now();
     predict_mesh();
     auto mesh_pred_fin = std::chrono::steady_clock::now();
@@ -200,8 +213,11 @@ void MeshEstimator::mask_receiving_callback(const std::string& frame_id) {
 void MeshEstimator::predict_mesh() {
   const double m_i = _mesh_param.m / _vertex_num;
   const double dt = 1.0 / _measure_rate;
-  const double k = _mesh_param.k;  // alpha = 1/k
-  const double gamma = _mesh_param.beta / (_mesh_param.k * dt);
+  const double k_tilde =
+    _mesh_param.k / dt / dt;  // alpha = 1/k, alpha_tilde = alpha / dt^2
+  const double gamma = _mesh_param.beta /
+    (_mesh_param.k *
+     dt);  // gamma = alpha_tilde * beta_tilde / dt = alpha * beta / dt
   const double l_0 = _mesh_param.spacing;
   const int rows = _mesh_param.rows;
   const int cols = _mesh_param.cols;
@@ -219,8 +235,8 @@ void MeshEstimator::predict_mesh() {
   /* Constraint projection */
   for (int i = 0; i < _xpbd_param.max_iter; i++) {
     compute_single_XPBD_step(
-      points, prev_points, lambda, _measurement, gamma, l_0, k, m_i, rows, cols,
-      _agent_num);
+      points, prev_points, lambda, _measurement, gamma, l_0, k_tilde, m_i, rows,
+      cols, _agent_num);
   }
   for (int i = 0; i < _vertex_num; i++) {
     _last_vels[i] = (points[i] - prev_points[i]) / dt;
@@ -235,7 +251,6 @@ void MeshEstimator::predict_mesh() {
 
 void MeshEstimator::correct_mesh() {
   /* Apply mask projection constraint */
-  std::cout << "correction on " << std::endl;
   const int mesh_rows = _mesh_param.rows;
   const int mesh_cols = _mesh_param.cols;
   const int cam_height = _camera_param.height;
@@ -243,11 +258,15 @@ void MeshEstimator::correct_mesh() {
 
   const double dt = 1.0 / _measure_rate;
   const double m_i = _mesh_param.m / _vertex_num;
-  const double k = _mesh_param.k;  // alpha = 1/k
-  const double gamma_E = _mesh_param.beta / (_mesh_param.k * dt);
+  const double k_tilde =
+    _mesh_param.k / dt / dt;  // alpha = 1/k, alpha_tilde = alpha / dt^2
+  const double gamma_E = _mesh_param.beta /
+    (_mesh_param.k *
+     dt);  // gamma = alpha_tilde * beta_tilde / dt = alpha * beta / dt
   const double l_0 = _mesh_param.spacing;
-  const double alpha_chamfer = _xpbd_param.alpha_chamfer;
-  const double gamma_chamfer = _xpbd_param.beta_chamfer * alpha_chamfer / dt;
+  const double alpha_chamfer_tilde = _xpbd_param.alpha_chamfer / dt / dt;
+  const double gamma_chamfer =
+    _xpbd_param.beta_chamfer * alpha_chamfer_tilde / dt;
 
   auto points = _est_mesh.points;
   // const auto prev_points = _last_mesh.points; /// NOT THIS
@@ -261,12 +280,58 @@ void MeshEstimator::correct_mesh() {
   dist_transform.resize(_agent_num);
   labels.resize(_agent_num);
   for (int id = 0; id < _agent_num; id++) {
-    cv_mask[id] = cv::Mat(
-      _mask[id].data.rows(), _mask[id].data.cols(), CV_8UC1,
-      (void*)_mask[id].data.data());
+    // const auto mask = _mask[id].data;
+    /*test*/
+    // MatrixXi mask;
+    // auto rows = _mask[id].data.rows();
+    // auto cols = _mask[id].data.cols();
+    // mask.resize(rows, cols);
+    // mask.setZero();
+    // for (int i = 0; i < rows / 2; i++) {
+    //   for (int j = 0; j < cols / 2; j++) {
+    //     mask(i, j) = 255;
+    //   }
+    // }
+    // auto test_mask =
+    //   cv::Mat(mask.rows(), mask.cols(), CV_8UC1, mask.data()).clone();
+
+    // cv_mask[id] =
+    //   cv::Mat(mask.rows(), mask.cols(), CV_8UC1, (void*)mask.data()).clone();
+    // cv_mask[id] = cv::Mat(
+    //                 _mask[id].data.rows(), _mask[id].data.cols(), CV_8UC1,
+    //                 (void*)_mask[id].data.data())
+    //                 .clone();
+    // cv_mask[id] *= 255;
+    // cv::bitwise_not(cv_mask[id], cv_mask[id]);
+    // cv::distanceTransform(
+    //   cv_mask[id], dist_transform[id], labels[id], cv::DIST_L2, 5,
+    //   cv::DIST_LABEL_PIXEL);
+
+    cv::Mat cv_mask(cam_height, cam_width, CV_8UC1);
+    uchar* ptr = cv_mask.ptr<uchar>();
+    
+    for (int i = 0; i < cam_height * cam_width; i++) {
+      int val = _mask[id].data.data()[i];  // row-major assumed
+      ptr[i] = static_cast<uchar>(std::clamp(val, 0, 255));
+    }
+
+    cv_mask *= 255;
+    cv::bitwise_not(cv_mask, cv_mask);
     cv::distanceTransform(
-      cv_mask[id], dist_transform[id], labels[id], cv::DIST_L2, 5,
+      cv_mask, dist_transform[id], labels[id], cv::DIST_L2, 5,
       cv::DIST_LABEL_PIXEL);
+
+    // /* temp: publish distance transform */
+    // if (id == 0) {
+    //   cv::Mat dist_visual;
+    //   cv::normalize(dist_transform[id], dist_visual, 0, 255, cv::NORM_MINMAX);
+    //   dist_visual.convertTo(dist_visual, CV_8UC1);  // convert to 8-bit image
+    //   sensor_msgs::ImagePtr msg =
+    //     cv_bridge::CvImage(std_msgs::Header(), "mono8", dist_visual).toImageMsg();
+    //   msg->header.stamp =
+    //     ros::Time::now();  // or use _prev_measurement[id].header.stamp
+    //   _dist_pub.publish(msg);
+    // }
   }
 
   for (int iter = 0; iter < _xpbd_param.correction_iter; iter++) {
@@ -331,18 +396,20 @@ void MeshEstimator::correct_mesh() {
             (proj_pos_normalized.segment<2>(0) - target_point).squaredNorm();
           Vector3d dC = 2 * dp_ki.transpose() *
             (proj_pos_normalized.segment<2>(0) - target_point);
-          double dLambda = (-C - alpha_chamfer * lambda_chamfer[chamfer_idx] -
-                            gamma_chamfer * dC.transpose() * (x - x_prev)) /
-            ((1 + gamma_chamfer) / m_i * dC.squaredNorm() + alpha_chamfer);
+          double dLambda =
+            (-C - alpha_chamfer_tilde * lambda_chamfer[chamfer_idx] -
+             gamma_chamfer * dC.transpose() * (x - x_prev)) /
+            ((1 + gamma_chamfer) / m_i * dC.squaredNorm() +
+             alpha_chamfer_tilde);
           x += dC * dLambda / m_i;
-          if (!(dC * dLambda / m_i).isZero()) {
-            std::cout << "C:" << C << std::endl;
-            std::cout << "x - x_prev: " << x - x_prev << std::endl;
-            std::cout << "target_point: " << target_point << std::endl;
-            std::cout << "proj_pos: " << proj_pos_normalized.segment<2>(0)
-                      << std::endl;
-            std::cout << "dx:" << dC * dLambda / m_i << std::endl;
-          }
+          // if (!(dC * dLambda / m_i).isZero()) {
+          //   std::cout << "C:" << C << std::endl;
+          //   std::cout << "x - x_prev: " << x - x_prev << std::endl;
+          //   std::cout << "target_point: " << target_point << std::endl;
+          //   std::cout << "proj_pos: " << proj_pos_normalized.segment<2>(0)
+          //             << std::endl;
+          //   std::cout << "dx:" << dC * dLambda / m_i << std::endl;
+          // }
           chamfer_idx++;
         }
       }
@@ -377,7 +444,7 @@ void compute_single_XPBD_step(
   std::vector<Vector3d>& points, const std::vector<Vector3d>& prev_points,
   std::vector<double>& lambda,
   const std::vector<robot_measurement_t>& measurement, const double gamma,
-  const double l_0, const double k, const double m_i, const int rows,
+  const double l_0, const double k_tilde, const double m_i, const int rows,
   const int cols, const int agent_num) {
   /* energy constraint */
   int con_idx = 0;
@@ -395,18 +462,18 @@ void compute_single_XPBD_step(
 
       /* orthogonal 1 */
       compute_energy_constraint_projection(
-        x0, x1, x0_prev, x1_prev, lambda[con_idx], l_0, k, m_i, gamma);
+        x0, x1, x0_prev, x1_prev, lambda[con_idx], l_0, k_tilde, m_i, gamma);
       con_idx++;
 
       /* diagonal */
       compute_energy_constraint_projection(
-        x0, x2, x0_prev, x2_prev, lambda[con_idx], sqrt(2) * l_0, k, m_i,
+        x0, x2, x0_prev, x2_prev, lambda[con_idx], sqrt(2) * l_0, k_tilde, m_i,
         gamma);
       con_idx++;
 
       /* orthogonal 2 */
       compute_energy_constraint_projection(
-        x0, x3, x0_prev, x3_prev, lambda[con_idx], l_0, k, m_i, gamma);
+        x0, x3, x0_prev, x3_prev, lambda[con_idx], l_0, k_tilde, m_i, gamma);
       con_idx++;
 
       // /* diagonal 2? */
@@ -423,7 +490,7 @@ void compute_single_XPBD_step(
     Vector3d x0_prev = prev_points[cols - 1 + cols * row],
              x1_prev = prev_points[cols - 1 + cols * (row + 1)];
     compute_energy_constraint_projection(
-      x0, x1, x0_prev, x1_prev, lambda[con_idx], l_0, k, m_i, gamma);
+      x0, x1, x0_prev, x1_prev, lambda[con_idx], l_0, k_tilde, m_i, gamma);
     con_idx++;
   }
   for (int col = 0; col < cols - 1; col++) {
@@ -433,7 +500,7 @@ void compute_single_XPBD_step(
     Vector3d x0_prev = prev_points[col + cols * (rows - 1)],
              x1_prev = prev_points[col + 1 + cols * (rows - 1)];
     compute_energy_constraint_projection(
-      x0, x1, x0_prev, x1_prev, lambda[con_idx], l_0, k, m_i, gamma);
+      x0, x1, x0_prev, x1_prev, lambda[con_idx], l_0, k_tilde, m_i, gamma);
     con_idx++;
   }
 
@@ -458,7 +525,7 @@ void compute_single_XPBD_step(
 
 void compute_energy_constraint_projection(
   Vector3d& x0, Vector3d& x1, const Vector3d& x0_prev, const Vector3d& x1_prev,
-  double& lambda, const double l, const double k, const double m,
+  double& lambda, const double l, const double k_tilde, const double m,
   const double gamma) {
   double C = (x0 - x1).norm() - l;
   Matrix<double, 6, 1> dC;
@@ -466,8 +533,8 @@ void compute_energy_constraint_projection(
   dC << (x0 - x1), (x1 - x0);
   dC /= (x0 - x1).norm();
   dx << x0 - x0_prev, x1 - x1_prev;
-  double dLambda = (-C - lambda / k - gamma * dC.transpose() * dx) /
-    ((1 + gamma) * dC.squaredNorm() / m * 2 + 1 / k);
+  double dLambda = (-C - lambda / k_tilde - gamma * dC.transpose() * dx) /
+    ((1 + gamma) * dC.squaredNorm() / m * 2 + 1 / k_tilde);
   lambda += dLambda;
   x0 += dC.segment<3>(0) * dLambda / m;
   x1 += dC.segment<3>(3) * dLambda / m;

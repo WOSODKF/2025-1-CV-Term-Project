@@ -18,6 +18,10 @@
 #include <chrono>
 #include <fstream>
 
+/*test*/
+#include <sensor_msgs/Image.h>
+#include <cv_bridge/cv_bridge.h>
+
 using namespace Eigen;
 
 class MeshEstimator {
@@ -58,6 +62,10 @@ private:
   bool _all_mask_ready;
   bool _initial_mesh_ready;
 
+  /*test*/
+  // ros::Publisher _dist_pub;
+  /**/
+
   std::ofstream _comp_log_file;
 
   void predict_mesh();
@@ -75,10 +83,10 @@ void compute_single_XPBD_step(
   std::vector<Vector3d>& points, const std::vector<Vector3d>& prev_points,
   std::vector<double>& lambda,
   const std::vector<robot_measurement_t>& measurement, const double gamma,
-  const double l_0, const double k, const double m_i, const int rows,
+  const double l_0, const double k_tilde, const double m_i, const int rows,
   const int cols, const int _agent_num);
 
 void compute_energy_constraint_projection(
   Vector3d& x0, Vector3d& x1, const Vector3d& x0_prev, const Vector3d& x1_prev,
-  double& lambda, const double l, const double k, const double m,
+  double& lambda, const double l, const double k_tilde, const double m,
   const double gamma);
